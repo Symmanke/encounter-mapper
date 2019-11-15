@@ -1,21 +1,25 @@
-from PyQt5.QtCore import (Qt, pyqtSignal)
-from PyQt5.QtGui import (QPainter, QPolygon)
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
-                             QPushButton, QSpinBox, QWidget, QListWidget,
+                             QPushButton, QWidget, QListWidget,
                              QListWidgetItem, QDialog)
 
 from EMTileEditor import EMTileEditor, EMTilePreviewWidget
 from EMTileEditorModel import EMTileEditorModel
 
+import json
+
 
 class EMTilePicker(QWidget):
     tileDialog = None
     tileEditor = None
-    tileModels = []
+
     currentIndex = -1
+
+    selectedTile = pyqtSignal()
 
     def __init__(self):
         super(EMTilePicker, self).__init__()
+        self.tileModels = []
         self.tileList = QListWidget()
         self.addTileButton = QPushButton("New Tile")
         self.addTileButton.clicked.connect(self.newTileDialog)
@@ -32,6 +36,7 @@ class EMTilePicker(QWidget):
         layout.addWidget(self.duplicateTileButton)
         layout.addWidget(self.deleteTileButton)
         self.setLayout(layout)
+        self.loadTiles()
 
     def newTileDialog(self):
         self.tileDialog = QDialog()
@@ -65,6 +70,7 @@ class EMTilePicker(QWidget):
         self.tileDialog = None
         self.tileEditor = None
         self.updateUI()
+        self.saveTiles()
 
     def updateExistingTileModel(self):
         tileModel = self.tileEditor.getCurrentModel()
@@ -73,6 +79,7 @@ class EMTilePicker(QWidget):
         self.tileDialog = None
         self.tileEditor = None
         self.updateUI()
+        self.saveTiles()
 
     def cancelTileModel(self):
         self.tileDialog.close()
@@ -87,6 +94,7 @@ class EMTilePicker(QWidget):
             dupe.setName(name)
             self.tileModels.insert(sr, dupe)
             self.updateUI()
+            self.saveTiles()
 
     def deleteTile(self):
         """TODO"""
@@ -100,6 +108,38 @@ class EMTilePicker(QWidget):
 
             self.tileList.addItem(listItem)
             self.tileList.setItemWidget(listItem, listItemWidget)
+
+    def saveTiles(self):
+        tileJS = {
+            "tiles": [],
+            "patterns": []
+        }
+        for tm in self.tileModels:
+            tileJS["tiles"].append(tm.jsonObj())
+
+        # Do fancy stuff to save the tile map
+        text = json.dumps(tileJS)
+        f = open("tiles.json", "w+")
+        f.write(text)
+        f.close()
+
+    def loadTiles(self):
+        f = open("tiles.json", "r")
+        if f.mode == 'r':
+            contents = f.read()
+            jsContents = json.loads(contents)
+            # f.close()
+
+            for tilejs in jsContents["tiles"]:
+                model = EMTileEditorModel(tilejs["name"])
+                for point in tilejs["points"]:
+                    model.addPoint(point[0], point[1])
+                self.tileModels.append(model)
+
+            self.updateUI()
+
+    def appendTile(self, tilejs):
+        """todo"""
 
 
 class EMTilePickerListItem(QWidget):

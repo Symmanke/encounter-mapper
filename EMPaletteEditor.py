@@ -234,6 +234,7 @@ class EMPaletteEditor(QWidget):
         if f.mode == 'r':
             contents = f.read()
             jsContents = json.loads(contents)
+            f.close()
             paletteName = jsContents["palette_name"]
             for c in jsContents["colors"]:
                 paletteColors.append(EMColorModel(c["name"],

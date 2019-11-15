@@ -3,19 +3,19 @@ from PyQt5.QtCore import (QObject, pyqtSignal, QPoint)
 
 
 class EMTileEditorModel(QObject):
-    uid = -1
-    pointList = []
-    name = "DEFAULT"
-    bgColor = QColor(105, 141, 85)
-    fgColor = QColor(101, 101, 102)
-    selectedIndex = -1
+    # pointList = []
+    # name = "DEFAULT"
 
     modelUpdated = pyqtSignal()
 
-    def __init__(self, name="DEFAULT", pointList=[]):
+    def __init__(self, name="DEFAULT", pointList=None):
         super(EMTileEditorModel, self).__init__()
         self.name = name
-        self.pointList = pointList
+        self.pointList = [] if pointList is None else pointList
+        self.bgColor = QColor(105, 141, 85)
+        self.fgColor = QColor(101, 101, 102)
+        self.selectedIndex = -1
+        self.uid = -1
 
     @classmethod
     def createCopy(cls, model):
@@ -141,6 +141,7 @@ class EMTileEditorModel(QObject):
         return {
             "name": self.name,
             "points": self.pointList,
+            "uid": self.uid,
             "fg": {
                 "r": self.fgColor.red(),
                 "g": self.fgColor.green(),
