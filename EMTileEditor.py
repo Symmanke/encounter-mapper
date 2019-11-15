@@ -21,6 +21,7 @@ class EMTileEditor(QWidget):
         layout = QGridLayout()
         self.previewWidget = EMTilePreviewWidget()
         self.tileName = QLineEdit()
+        self.tileName.textChanged.connect(self.updateModelName)
         self.tilePointList = QListWidget()
         self.tilePointList.itemClicked.connect(self.updateCurrentItem)
         self.pointXEdit = QSpinBox()
@@ -190,10 +191,14 @@ class EMTileEditor(QWidget):
     def updateCurrentItem(self):
         self.tileModel.setSelectedIndex(self.tilePointList.currentRow())
 
+    def updateModelName(self):
+        self.tileModel.setName(self.tileName.text())
+
     def updateUI(self):
         self.reloadPointList()
         self.previewWidget.repaint()
         self.updateCurrentValues()
+        self.tileName.setText(self.tileModel.getName())
         self.enableButtons()
 
     def reloadPointList(self):
@@ -322,7 +327,6 @@ class EMTilePreviewWidget(QWidget):
                     points = self.tileModel.getPoints()
                     for i in range(len(points)):
                         point = points[i]
-                        print("index: {}, MP: {}, P: {}".format(i, mp, point))
                         if self.distanceHelper(mp, point) <= 100:
                             self.binkedPoint = True
                             self.tileModel.setSelectedIndex(i)

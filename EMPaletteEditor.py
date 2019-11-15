@@ -180,7 +180,6 @@ class EMPaletteEditor(QWidget):
 
     def colorSelected(self):
         index = max(0, self.paletteColors.currentIndex())
-        print(index)
         if(index == 0):
             self.addButton.setText("Add")
             self.deleteButton.setEnabled(False)
