@@ -2,7 +2,7 @@ from PyQt5.QtCore import (Qt, pyqtSignal)
 from PyQt5.QtGui import (QPainter, QPolygon)
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
                              QLineEdit, QPushButton, QSpinBox, QWidget,
-                             QListWidget)
+                             QListWidget, QDialog, QVBoxLayout)
 
 from EMPaletteEditor import EMPaletteEditor
 from EMTileEditorModel import EMTileEditorModel
@@ -10,6 +10,7 @@ from EMTileEditorModel import EMTileEditorModel
 
 class EMTileEditor(QWidget):
     selectingColor = ""
+    paletteDialog = None
     paletteEditor = None
 
     addModel = pyqtSignal()
@@ -135,20 +136,34 @@ class EMTileEditor(QWidget):
         self.tileModel.transformFlip(False)
 
     def setFGColor(self):
+        self.paletteDialog = QDialog()
+        layout = QVBoxLayout()
+
         fg = self.tileModel.getFgColor()
         self.selectingColor = "fg"
         self.paletteEditor = EMPaletteEditor(fg.red(), fg.green(), fg.blue())
         self.paletteEditor.colorApplied.connect(self.applyColorChange)
         self.paletteEditor.colorCanceled.connect(self.cancelColorChange)
-        self.paletteEditor.show()
+
+        layout.addWidget(self.paletteEditor)
+        self.paletteDialog.setLayout(layout)
+        self.paletteDialog.exec_()
+        # self.paletteEditor.show()
 
     def setBGColor(self):
         bg = self.tileModel.getFgColor()
+        layout = QVBoxLayout()
+
+        self.paletteDialog = QDialog()
         self.selectingColor = "bg"
         self.paletteEditor = EMPaletteEditor(bg.red(), bg.green(), bg.blue())
         self.paletteEditor.colorApplied.connect(self.applyColorChange)
         self.paletteEditor.colorCanceled.connect(self.cancelColorChange)
-        self.paletteEditor.show()
+        # self.paletteEditor.show()
+
+        layout.addWidget(self.paletteEditor)
+        self.paletteDialog.setLayout(layout)
+        self.paletteDialog.exec_()
 
     def applyColorChange(self, r, g, b):
         if self.selectingColor == "bg":
@@ -156,10 +171,14 @@ class EMTileEditor(QWidget):
         elif self.selectingColor == "fg":
             self.tileModel.setFgColor(r, g, b)
         self.selectingColor = ""
+        self.paletteDialog.close()
+        self.paletteDialog = None
         self.paletteEditor = None
 
     def cancelColorChange(self):
         self.selectingColor = ""
+        self.paletteDialog.close()
+        self.paletteDialog = None
         self.paletteEditor = None
 
     def setModel(self, model):

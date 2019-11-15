@@ -2,13 +2,14 @@ from PyQt5.QtCore import (Qt, pyqtSignal)
 from PyQt5.QtGui import (QPainter, QPolygon)
 from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QSpinBox, QWidget, QListWidget,
-                             QListWidgetItem)
+                             QListWidgetItem, QDialog)
 
 from EMTileEditor import EMTileEditor, EMTilePreviewWidget
 from EMTileEditorModel import EMTileEditorModel
 
 
 class EMTilePicker(QWidget):
+    tileDialog = None
     tileEditor = None
     tileModels = []
     currentIndex = -1
@@ -17,9 +18,9 @@ class EMTilePicker(QWidget):
         super(EMTilePicker, self).__init__()
         self.tileList = QListWidget()
         self.addTileButton = QPushButton("New Tile")
-        self.addTileButton.clicked.connect(self.newTileWindow)
+        self.addTileButton.clicked.connect(self.newTileDialog)
         self.editTileButton = QPushButton("Edit Tile")
-        self.editTileButton.clicked.connect(self.editTileWindow)
+        self.editTileButton.clicked.connect(self.editTileDialog)
         self.duplicateTileButton = QPushButton("Duplicate")
         self.duplicateTileButton.clicked.connect(self.duplicateTile)
         self.deleteTileButton = QPushButton("Delete Tile")
@@ -32,35 +33,50 @@ class EMTilePicker(QWidget):
         layout.addWidget(self.deleteTileButton)
         self.setLayout(layout)
 
-    def newTileWindow(self):
+    def newTileDialog(self):
+        self.tileDialog = QDialog()
+        layout = QVBoxLayout()
         self.tileEditor = EMTileEditor()
         self.tileEditor.addModel.connect(self.addNewTileModel)
         self.tileEditor.cancelModel.connect(self.cancelTileModel)
-        self.tileEditor.show()
+        layout.addWidget(self.tileEditor)
+        self.tileDialog.setLayout(layout)
+        self.tileDialog.exec_()
 
-    def editTileWindow(self):
+    def editTileDialog(self):
         sr = self.tileList.currentRow()
         if sr >= 0:
+            self.tileDialog = QDialog()
+            layout = QVBoxLayout()
             tempCopy = EMTileEditorModel.createCopy(self.tileModels[sr])
             self.tileEditor = EMTileEditor()
             self.tileEditor.setModel(tempCopy)
             self.tileEditor.addModel.connect(self.updateExistingTileModel)
             self.tileEditor.cancelModel.connect(self.cancelTileModel)
-            self.tileEditor.show()
+
+            layout.addWidget(self.tileEditor)
+            self.tileDialog.setLayout(layout)
+            self.tileDialog.exec_()
 
     def addNewTileModel(self):
         tileModel = self.tileEditor.getCurrentModel()
         self.tileModels.append(tileModel)
+        self.tileDialog.close()
+        self.tileDialog = None
         self.tileEditor = None
         self.updateUI()
 
     def updateExistingTileModel(self):
         tileModel = self.tileEditor.getCurrentModel()
         self.tileModels[self.tileList.currentRow()] = tileModel
+        self.tileDialog.close()
+        self.tileDialog = None
         self.tileEditor = None
         self.updateUI()
 
     def cancelTileModel(self):
+        self.tileDialog.close()
+        self.tileDialog = None
         self.tileEditor = None
 
     def duplicateTile(self):
