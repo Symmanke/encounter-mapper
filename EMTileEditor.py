@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
                              QListWidget, QDialog, QVBoxLayout)
 
 from EMPaletteEditor import EMPaletteEditor
-from EMTileEditorModel import EMTileEditorModel
+from EMModel import TileModel
 
 
 class EMTileEditor(QWidget):
@@ -16,7 +16,7 @@ class EMTileEditor(QWidget):
     addModel = pyqtSignal()
     cancelModel = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, model=None):
         super(EMTileEditor, self).__init__()
         layout = QGridLayout()
         self.previewWidget = EMTilePreviewWidget()
@@ -92,13 +92,14 @@ class EMTileEditor(QWidget):
         layout.addWidget(acbtn, 7, 0, 1, 5)
 
         self.setLayout(layout)
-
-        self.tileModel = EMTileEditorModel("DEFAULT", [])
+        if model is None:
+            self.tileModel = TileModel("tileName", [(50, 50)])
+        else:
+            self.tileModel = model
         self.tileModel.modelUpdated.connect(self.updateUI)
         self.previewWidget.setModel(self.tileModel)
 
-        self.tileModel.addPoint(50, 50)
-        self.tilePointList.setCurrentRow(0)
+        self.updateUI()
 
     def addPoint(self):
         self.tileModel.addPoint(self.pointXEdit.value(),
@@ -320,8 +321,7 @@ class EMTilePreviewWidget(QWidget):
             mp = self.mousePosScale(QMouseEvent.pos())
             # check if selected one is clicked first
             if self.tileModel.getSelectedIndex() != -1:
-                if self.distanceHelper(mp,
-                                       self.tileModel.getSelectedPoint()) <= 100:
+                if self.distanceHelper(mp, self.tileModel.getSelectedPoint()) <= 100:
                     self.binkedPoint = True
                 else:
                     points = self.tileModel.getPoints()

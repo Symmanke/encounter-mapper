@@ -4,13 +4,20 @@ from PyQt5.QtCore import (QObject, pyqtSignal, QPoint)
 
 class EMModel(QObject):
 
+    modelUpdated = pyqtSignal()
+
     def __init__(self, uid=-1):
         super(EMModel, self).__init__()
         self.uid = uid
-        self.modelUpdated = pyqtSignal()
 
     def getUid(self):
         return self.uid
+
+    def setUid(self, uid):
+        self.uid = uid
+
+    def updateModel(self, model):
+        print("Warning: NEED to implement")
 
     @classmethod
     def createModelCopy(cls, model):
@@ -37,11 +44,11 @@ class TileModel(EMModel):
                 self.pointList.append((point[0], point[1]))
         # self.pointList = [] if pointList is None else pointList
         bg = (105, 141, 85) if bgTupe is None else bgTupe
-        fg = (105, 141, 85) if fgTupe is None else fgTupe
+        fg = (101, 101, 102) if fgTupe is None else fgTupe
         self.bgColor = QColor(bg[0], bg[1], bg[2])
         self.fgColor = QColor(fg[0], fg[1], fg[2])
         self.selectedIndex = len(self.pointList) - 1
-        # self.uid = -1
+        self.tags = []
 
     @classmethod
     def createModelCopy(cls, model):
@@ -91,6 +98,12 @@ class TileModel(EMModel):
         if index >= 0 and index < len(self.pointList):
             self.pointList[index] = (x, y)
             self.modelUpdated.emit()
+
+    def updateModel(self, model):
+        self.name = model.getName()
+        self.pointList = model.getPoints()
+        self.bgColor = model.getBgColor()
+        self.fgColor = model.getFgColor()
 
     def deleteSelectedPoint(self):
         self.deletePoint(self.selectedIndex)

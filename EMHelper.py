@@ -10,13 +10,13 @@ class ModelManager():
     tileModelsByID = {}
     tileModelTags = {}
     tileModelsByName = {}
-    tileModelNextUID = -1
+    tileModelNextUID = 0
 
     groupModels = None
     groupModelsByID = {}
     groupModelsByTag = {}
     groupModelsByName = {}
-    groupModelNextUID = -1
+    groupModelNextUID = 0
 
     def __init__(self):
         ModelManager.loadPalette()
@@ -38,12 +38,20 @@ class ModelManager():
 
             for tilejs in jsContents["tiles"]:
                 cls.tileModels.append(TileModel.createModelJS(tilejs))
-        # cls.updateTileCache()
+        cls.createTileCache()
+
+    @classmethod
+    def generateNewTileUid(cls):
+        while cls.tileModelNextUID in cls.tileModelsByID:
+            cls.tileModelNextUID += 1
+        return cls.tileModelNextUID
 
     @classmethod
     def createTileCache(cls):
-        # first do
-        pass
+        cls.tileModelsByID.clear()
+        for model in cls.tileModels:
+            cls.tileModelsByID[model.getUid()] = model
+        print(cls.tileModelsByID)
 
     @classmethod
     def updateTileCache(cls, model):
@@ -113,8 +121,21 @@ class ModelManager():
 
     @classmethod
     def updateTile(cls, model):
-        """Todo"""
+        if model.getUid in cls.tileModelsByID:
+            mainModel = cls.tileModelsByID[model.getUid()]
+            mainModel.updateModel(model)
+        cls.saveTiles()
 
     @classmethod
     def updateGroup(cls, model):
         """Todo"""
+
+    @classmethod
+    def addTile(cls, model, index=-1):
+        model.setUid(cls.generateNewTileUid())
+        if(index < 0):
+            cls.tileModels.append(model)
+        else:
+            cls.tileModels.insert(index, model)
+        cls.tileModelsByID[model.getUid()] = model
+        cls.saveTiles()
