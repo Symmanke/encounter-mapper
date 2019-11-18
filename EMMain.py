@@ -61,6 +61,7 @@ tab2 = QWidget()
 
 
 tabWidget.addTab(EMTilePicker(), "Tiles")
+tabWidget.addTab(QWidget(), "Groups")
 tabWidget.addTab(setTilesLayout(), "Objects")
 tabWidget.addTab(EMNotesTab(), "Notes")
 

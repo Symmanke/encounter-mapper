@@ -3,11 +3,14 @@ from PyQt5.QtCore import (QObject, pyqtSignal, QPoint)
 
 
 class EMModel(QObject):
-    modelUpdated = pyqtSignal()
 
     def __init__(self, uid=-1):
         super(EMModel, self).__init__()
         self.uid = uid
+        self.modelUpdated = pyqtSignal()
+
+    def getUid(self):
+        return self.uid
 
     @classmethod
     def createModelCopy(cls, model):
@@ -25,28 +28,40 @@ class EMModel(QObject):
 
 class TileModel(EMModel):
     def __init__(self, name="DEFAULT", pointList=None,
-                 fgTupe=None, bgTupe=None):
-        super(TileModel, self).__init__()
+                 fgTupe=None, bgTupe=None, uid=-1):
+        super(TileModel, self).__init__(uid)
         self.name = name
-        self.pointList = [] if pointList is None else pointList
+        self.pointList = []
+        if pointList is not None:
+            for point in pointList:
+                self.pointList.append((point[0], point[1]))
+        # self.pointList = [] if pointList is None else pointList
         bg = (105, 141, 85) if bgTupe is None else bgTupe
         fg = (105, 141, 85) if fgTupe is None else fgTupe
         self.bgColor = QColor(bg[0], bg[1], bg[2])
         self.fgColor = QColor(fg[0], fg[1], fg[2])
-        self.selectedIndex = -1
-        self.uid = -1
+        self.selectedIndex = len(self.pointList) - 1
+        # self.uid = -1
 
     @classmethod
-    def createCopy(cls, model):
-        mcopy = cls(model.getName(), [])
+    def createModelCopy(cls, model):
         bg = model.getBgColor()
         fg = model.getFgColor()
-
-        mcopy.setBgColor(bg.red(), bg.green(), bg.blue())
-        mcopy.setFgColor(fg.red(), fg.green(), fg.blue())
-        for point in model.pointList:
-            mcopy.addPoint(point[0], point[1])
+        mcopy = cls(model.getName(), model.getPoints(),
+                    (fg.red(), fg.green(), fg.blue()),
+                    (bg.red(), bg.green(), bg.blue()),
+                    model.getUid())
         return mcopy
+
+    @classmethod
+    def createModelJS(cls, modelJS):
+        fg = modelJS["fg"]
+        bg = modelJS["bg"]
+        model = cls(modelJS["name"], modelJS["points"],
+                    (fg["r"], fg["g"], fg["b"]),
+                    (bg["r"], bg["g"], bg["b"]),
+                    modelJS["uid"])
+        return model
 
     def setBgColor(self, r, g, b):
         self.bgColor = QColor(r, g, b)

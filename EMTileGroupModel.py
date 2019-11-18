@@ -2,37 +2,18 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtCore import (QObject, pyqtSignal, QPoint)
 
 
-class EMModel(QObject):
+class EMTileGroupModel(QObject):
+    # pointList = []
+    # name = "DEFAULT"
+
     modelUpdated = pyqtSignal()
 
-    def __init__(self, uid=-1):
-        super(EMModel, self).__init__()
-        self.uid = uid
-
-    @classmethod
-    def createModelCopy(cls, model):
-        return None
-
-    @classmethod
-    def createModelJS(cls, modelJS):
-        return None
-
-    def jsonObj(self):
-        return {
-            "Needs": "Implementation"
-        }
-
-
-class TileModel(EMModel):
-    def __init__(self, name="DEFAULT", pointList=None,
-                 fgTupe=None, bgTupe=None):
-        super(TileModel, self).__init__()
+    def __init__(self, name="DEFAULT", pointList=None):
+        super(EMTileEditorModel, self).__init__()
         self.name = name
         self.pointList = [] if pointList is None else pointList
-        bg = (105, 141, 85) if bgTupe is None else bgTupe
-        fg = (105, 141, 85) if fgTupe is None else fgTupe
-        self.bgColor = QColor(bg[0], bg[1], bg[2])
-        self.fgColor = QColor(fg[0], fg[1], fg[2])
+        self.bgColor = QColor(105, 141, 85)
+        self.fgColor = QColor(101, 101, 102)
         self.selectedIndex = -1
         self.uid = -1
 

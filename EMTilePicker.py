@@ -5,6 +5,8 @@ from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
 
 from EMTileEditor import EMTileEditor, EMTilePreviewWidget
 from EMTileEditorModel import EMTileEditorModel
+from EMModel import TileModel
+from EMHelper import ModelManager
 
 import json
 
@@ -124,19 +126,21 @@ class EMTilePicker(QWidget):
         f.close()
 
     def loadTiles(self):
-        f = open("tiles.json", "r")
-        if f.mode == 'r':
-            contents = f.read()
-            jsContents = json.loads(contents)
-            # f.close()
-
-            for tilejs in jsContents["tiles"]:
-                model = EMTileEditorModel(tilejs["name"])
-                for point in tilejs["points"]:
-                    model.addPoint(point[0], point[1])
-                self.tileModels.append(model)
-
-            self.updateUI()
+        # f = open("tiles.json", "r")
+        # if f.mode == 'r':
+        #     contents = f.read()
+        #     jsContents = json.loads(contents)
+        #     # f.close()
+        #
+        #     for tilejs in jsContents["tiles"]:
+        #         model = EMTileEditorModel(tilejs["name"])
+        #         for point in tilejs["points"]:
+        #             model.addPoint(point[0], point[1])
+        #         self.tileModels.append(model)
+        #
+        #     self.updateUI()
+        self.tileModels = ModelManager.fetchTiles()
+        self.updateUI()
 
     def appendTile(self, tilejs):
         """todo"""
