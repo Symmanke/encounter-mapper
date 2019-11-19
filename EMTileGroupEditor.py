@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
                              QListWidget, QDialog, QVBoxLayout)
 
 from EMPaletteEditor import EMPaletteEditor
-from EMTileEditorModel import EMTileEditorModel
+from EMTileEditor import EMTileEditor
 
 
 class TileGroupEditor(QWidget):

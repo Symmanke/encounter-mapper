@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QWidget, QListWidget,
                              QListWidgetItem, QDialog)
 
-from EMTileEditor import EMTileEditor, EMTilePreviewWidget
+from EMTileEditor import TileEditor, TilePreviewWidget
 from EMModel import TileModel
 from EMHelper import ModelManager
 
@@ -40,7 +40,7 @@ class TilePicker(QWidget):
     def newTileDialog(self):
         self.tileDialog = QDialog()
         layout = QVBoxLayout()
-        self.tileEditor = EMTileEditor()
+        self.tileEditor = TileEditor()
         self.tileEditor.addModel.connect(self.addNewTileModel)
         self.tileEditor.cancelModel.connect(self.cancelTileModel)
         layout.addWidget(self.tileEditor)
@@ -54,7 +54,7 @@ class TilePicker(QWidget):
             layout = QVBoxLayout()
             tempCopy = TileModel.createModelCopy(self.tileModels[sr])
 
-            self.tileEditor = EMTileEditor(tempCopy)
+            self.tileEditor = TileEditor(tempCopy)
             self.tileEditor.addModel.connect(self.updateExistingTileModel)
             self.tileEditor.cancelModel.connect(self.cancelTileModel)
 
@@ -126,7 +126,7 @@ class TilePickerListItem(QWidget):
         self.tileModel = model
         if model is not None:
             layout = QHBoxLayout()
-            self.preview = EMTilePreviewWidget.previewWidget(self.tileModel)
+            self.preview = TilePreviewWidget.previewWidget(self.tileModel)
             layout.addWidget(self.preview)
             layout.addWidget(QLabel(self.tileModel.getName()))
             self.setLayout(layout)

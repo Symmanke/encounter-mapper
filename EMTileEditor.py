@@ -8,7 +8,7 @@ from EMPaletteEditor import EMPaletteEditor
 from EMModel import TileModel
 
 
-class EMTileEditor(QWidget):
+class TileEditor(QWidget):
     selectingColor = ""
     paletteDialog = None
     paletteEditor = None
@@ -17,9 +17,9 @@ class EMTileEditor(QWidget):
     cancelModel = pyqtSignal()
 
     def __init__(self, model=None):
-        super(EMTileEditor, self).__init__()
+        super(TileEditor, self).__init__()
         layout = QGridLayout()
-        self.previewWidget = EMTilePreviewWidget()
+        self.previewWidget = TilePreviewWidget()
         self.tileName = QLineEdit()
         self.tileName.textChanged.connect(self.updateModelName)
         self.tilePointList = QListWidget()
@@ -245,21 +245,16 @@ class EMTileEditor(QWidget):
         return self.tileModel
 
 
-class EMTilePreviewWidget(QWidget):
+class TilePreviewWidget(QWidget):
     """
     widget that displays the preview of the object.
     """
 
     pointSelected = pyqtSignal(int)
     pointDragged = pyqtSignal(int, int)
-    tileModel = None
-    binkedPoint = False
-    isPreview = False
-    borderOffset = 10
-    size = 500
 
     def __init__(self, size=500, border=10, preview=False, model=None):
-        super(EMTilePreviewWidget, self).__init__()
+        super(TilePreviewWidget, self).__init__()
         self.size = size
         self.borderOffset = border
         self.setMinimumHeight(self.size+(self.borderOffset*2))
@@ -359,7 +354,7 @@ class EMTilePreviewWidget(QWidget):
 def main():
     app = QApplication([])
 
-    mainWidget = EMTileEditor()
+    mainWidget = TileEditor()
     mainWidget.show()
     app.exec_()
 

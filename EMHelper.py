@@ -112,6 +112,14 @@ class ModelManager():
         return cls.copyList(cls.tileModels, "tile")
 
     @classmethod
+    def fetchTileById(cls, id):
+        if cls.tileModels is None:
+            cls.loadTiles()
+        if id in cls.tileModelsByID:
+            return TileModel.createModelCopy(cls.tileModelsByID[id])
+        return None
+
+    @classmethod
     def fetchGroups(cls, keyword=None, searchType=None):
         """"Todo"""
 

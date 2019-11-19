@@ -34,7 +34,7 @@ class EMModel(QObject):
 
 
 class TileModel(EMModel):
-    def __init__(self, name="DEFAULT", pointList=None,
+    def __init__(self, name="new layer", pointList=None,
                  fgTupe=None, bgTupe=None, uid=-1):
         super(TileModel, self).__init__(uid)
         self.name = name
@@ -155,14 +155,35 @@ class TileModel(EMModel):
     def getNumPoints(self):
         return len(self.pointList)
 
-    def generatePointOffset(self, xInd, yInd, scale=100, xOff=0, yOff=0):
+    def generatePointOffset(self, xInd, yInd,
+                            scale=100, xOff=0, yOff=0,
+                            orientation=0, hflip=False, vflip=False):
         tempPoints = []
         scaleX = (xInd * scale) + xOff
         scaleY = (yInd * scale) + yOff
         pointScale = scale/100
-        for point in self.pointList:
-            tempPoints.append(QPoint(point[0] * pointScale + scaleX,
-                                     point[1] * pointScale + scaleY))
+        for p in self.pointList:
+
+            if orientation == 1:
+                p = (100 - p[1], p[0])
+                # flip cw
+            elif orientation == 2:
+                p = (100 - p[0], 100 - p[1])
+
+            elif orientation == 3:
+                # flip ccw
+                p = (p[1],  100 - p[0])
+                pass
+            if hflip:
+                p = (100 - p[0], p[1])
+
+            if vflip:
+                p = (p[0], 100 - p[1])
+
+            point = (p[0] * pointScale + scaleX,
+                     p[1] * pointScale + scaleY)
+
+            tempPoints.append(QPoint(point[0], point[1]))
         return tempPoints
 
     def transformRotate(self, cw):
@@ -201,3 +222,42 @@ class TileModel(EMModel):
             }
 
         }
+
+
+class GroupModel(EMModel):
+    def __init__(self, name="new grid", tileGrid=None,
+                 ttf=None, uid=-1):
+        super(GroupModel, self).__init__(uid)
+        if tileGrid is None:
+            self.tileGrid = []
+            self.rows = 3
+            self.cols = 2
+            for y in range(self.rows):
+                self.tileGrid.append([])
+                for x in range(self.cols):
+                    self.tileGrid[-1].append((0, 0, False, False))
+        else:
+            self.tileGrid = tileGrid
+            self.rows = len(self.tileGrid)
+            self.cols = 0 if self.rows == 0 else len(self.tileGrid[0])
+        self.tilesToFetch = self.generateTilesToFetch() if ttf is None else ttf
+
+    def getTileGrid(self):
+        return self.tileGrid
+
+    def getNumRows(self):
+        return self.rows
+
+    def getNumCols(self):
+        return self.cols
+
+    def getTilesToFetch(self):
+        return self.tilesToFetch
+
+    def generateTilesToFetch(self):
+        ttf = []
+        for row in self.tileGrid:
+            for tile in row:
+                if tile[0] not in ttf:
+                    ttf.append(tile[0])
+        return ttf
