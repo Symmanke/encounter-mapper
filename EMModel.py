@@ -228,6 +228,7 @@ class GroupModel(EMModel):
     def __init__(self, name="new grid", tileGrid=None,
                  ttf=None, uid=-1):
         super(GroupModel, self).__init__(uid)
+        self.name = name
         if tileGrid is None:
             self.tileGrid = []
             self.rows = 3
@@ -235,7 +236,7 @@ class GroupModel(EMModel):
             for y in range(self.rows):
                 self.tileGrid.append([])
                 for x in range(self.cols):
-                    self.tileGrid[-1].append((0, 0, False, False))
+                    self.tileGrid[-1].append((-1, 0, False, False))
         else:
             self.tileGrid = tileGrid
             self.rows = len(self.tileGrid)
@@ -253,6 +254,42 @@ class GroupModel(EMModel):
 
     def getTilesToFetch(self):
         return self.tilesToFetch
+
+    def getGroupName(self):
+        return self.name
+
+    def setGroupName(self, name):
+        self.name = name
+
+    def setTileForIndex(self, x, y, tile):
+        self.tileGrid[y][x] = tile
+        self.modelUpdated.emit()
+
+    def addRow(self):
+        self.tileGrid.append([])
+        for i in range(self.cols):
+            self.tileGrid[-1].append((-1, 0, False, False))
+        self.rows += 1
+        self.modelUpdated.emit()
+
+    def delRow(self):
+        if(self.rows > 1):
+            self.tileGrid.pop()
+            self.rows -= 1
+            self.modelUpdated.emit()
+
+    def addCol(self):
+        for row in self.tileGrid:
+            row.append((-1, 0, False, False))
+        self.cols += 1
+        self.modelUpdated.emit()
+
+    def delCol(self):
+        if(self.cols > 1):
+            for row in self.tileGrid:
+                row.pop()
+            self.cols -= 1
+            self.modelUpdated.emit()
 
     def generateTilesToFetch(self):
         ttf = []

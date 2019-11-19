@@ -312,11 +312,14 @@ class TilePreviewWidget(QWidget):
             painter.drawEllipse(selectedPoint.x()-r, selectedPoint.y()-r, d, d)
 
     def mousePressEvent(self, QMouseEvent):
-        if not self.isPreview:
+        if self.isPreview:
+            QMouseEvent.ignore()
+        else:
             mp = self.mousePosScale(QMouseEvent.pos())
             # check if selected one is clicked first
             if self.tileModel.getSelectedIndex() != -1:
-                if self.distanceHelper(mp, self.tileModel.getSelectedPoint()) <= 100:
+                if self.distanceHelper(
+                        mp, self.tileModel.getSelectedPoint()) <= 100:
                     self.binkedPoint = True
                 else:
                     points = self.tileModel.getPoints()
@@ -328,13 +331,17 @@ class TilePreviewWidget(QWidget):
                             break
 
     def mouseMoveEvent(self, QMouseEvent):
-        if not self.isPreview:
+        if self.isPreview:
+            QMouseEvent.ignore()
+        else:
             if self.binkedPoint:
                 mp = self.mousePosScale(QMouseEvent.pos())
                 self.tileModel.setSelectedPoint(mp[0], mp[1])
 
     def mouseReleaseEvent(self, QMouseEvent):
-        if not self.isPreview:
+        if self.isPreview:
+            QMouseEvent.ignore()
+        else:
             self.binkedPoint = False
 
     def mousePosScale(self, mPoint):
