@@ -15,6 +15,7 @@ class TilePicker(QWidget):
     currentIndex = -1
 
     selectedTile = pyqtSignal(int)
+    updatedTile = pyqtSignal(int)
 
     def __init__(self):
         super(TilePicker, self).__init__()
@@ -85,6 +86,7 @@ class TilePicker(QWidget):
         self.tileDialog = None
         self.tileEditor = None
         self.updateUI()
+        self.updatedTile.emit(tileModel.getUid())
 
     def cancelTileModel(self):
         self.tileDialog.close()

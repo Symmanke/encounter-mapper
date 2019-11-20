@@ -30,6 +30,7 @@ class GroupEditor(QWidget):
         self.groupPreview.updatePreview.connect(self.updateUI)
         self.tilePicker = TilePicker()
         self.tilePicker.selectedTile.connect(self.groupPreview.setPTile)
+        self.tilePicker.updatedTile.connect(self.updateGroupList)
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
         self.cwBtn = QPushButton("CW")
@@ -103,6 +104,11 @@ class GroupEditor(QWidget):
     def delGroupCol(self):
         self.groupModel.delCol()
 
+    def updateGroupList(self, id):
+        print("updating after id {} has been edited".format(id))
+        self.groupPreview.updateModelList(id)
+        self.groupPreview.repaint()
+
     def updateUI(self):
         # update Buttons
         options = self.groupPreview.getPOptions()
@@ -134,8 +140,9 @@ class GroupPreview(QWidget):
         self.pOrientation = 0
         self.pvFlip = False
         self.phFlip = False
-        self.pTile = 0
-        self.modelList = self.createModelList()
+        self.pTile = -1
+        self.modelList = {}
+        self.createModelList()
         self.setMouseTracking(True)
         self.mousePressed = False
 
@@ -149,8 +156,8 @@ class GroupPreview(QWidget):
 
     def setPTile(self, tileId):
         self.pTile = tileId
-        if self.pTile != -1 and self.pTile not in self.modelList:
-            self.modelList[self.pTile] = ModelManager.fetchTileById(self.pTile)
+        print("setting tileId to {}".format(tileId))
+        self.updateModelList(tileId)
 
     def getPOptions(self):
         return (self.pOrientation, self.phFlip, self.pvFlip)
@@ -173,12 +180,15 @@ class GroupPreview(QWidget):
         self.yOffset = (500 - self.numRows*self.tileSize)/2
 
     def createModelList(self):
-        modelList = {}
+
         for id in self.groupModel.getTilesToFetch():
-            modelList[id] = ModelManager.fetchTileById(id)
-        if self.pTile != -1 and self.pTile not in modelList:
-            modelList[self.pTile] = ModelManager.fetchTileById(self.pTile)
-        return modelList
+            self.updateModelList(id)
+        if self.pTile != -1 and self.pTile not in self.modelList:
+            self.updateModelList(id)
+
+    def updateModelList(self, id):
+        if id != -1:
+            self.modelList[self.pTile] = ModelManager.fetchTileById(id)
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)

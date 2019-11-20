@@ -104,6 +104,7 @@ class TileModel(EMModel):
         self.pointList = model.getPoints()
         self.bgColor = model.getBgColor()
         self.fgColor = model.getFgColor()
+        self.modelUpdated.emit()
 
     def deleteSelectedPoint(self):
         self.deletePoint(self.selectedIndex)

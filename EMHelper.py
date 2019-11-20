@@ -128,7 +128,7 @@ class ModelManager():
 
     @classmethod
     def updateTile(cls, model):
-        if model.getUid in cls.tileModelsByID:
+        if model.getUid() in cls.tileModelsByID:
             mainModel = cls.tileModelsByID[model.getUid()]
             mainModel.updateModel(model)
         cls.saveTiles()
