@@ -27,6 +27,7 @@ class GroupEditor(QWidget):
         titleGroup.setLayout(titleLayout)
 
         self.groupPreview = GroupPreview(self.groupModel)
+        self.groupPreview.updatePreview.connect(self.updateUI)
         self.tilePicker = TilePicker()
         self.tilePicker.selectedTile.connect(self.groupPreview.setPTile)
         self.btnGroup = QWidget()
@@ -36,8 +37,10 @@ class GroupEditor(QWidget):
         self.ccwBtn = QPushButton("CCW")
         self.ccwBtn.clicked.connect(self.rotateTileMapCCW)
         self.hfBtn = QPushButton("|")
+        self.hfBtn.setCheckable(True)
         self.hfBtn.clicked.connect(self.flipTileMapH)
         self.vfBtn = QPushButton("--")
+        self.vfBtn.setCheckable(True)
         self.vfBtn.clicked.connect(self.flipTileMapV)
         self.addRowBtn = QPushButton("Add Row")
         self.addRowBtn.clicked.connect(self.addGroupRow)
@@ -101,12 +104,19 @@ class GroupEditor(QWidget):
         self.groupModel.delCol()
 
     def updateUI(self):
-        # TODO: fix update everything
+        # update Buttons
+        options = self.groupPreview.getPOptions()
+        self.hfBtn.setChecked(options[1])
+        self.vfBtn.setChecked(options[2])
+        self.btnGroup.repaint()
+        # update the preview
         self.groupPreview.calculateOffsets()
         self.groupPreview.repaint()
 
 
 class GroupPreview(QWidget):
+
+    updatePreview = pyqtSignal()
 
     def __init__(self, model=None):
         super(GroupPreview, self).__init__()
@@ -129,10 +139,21 @@ class GroupPreview(QWidget):
         self.setMouseTracking(True)
         self.mousePressed = False
 
+        self.keyBindings = {
+            Qt.Key_R: (self.transformP, "cw"),
+            Qt.Key_R | Qt.ShiftModifier: (self.transformP, "ccw"),
+            Qt.Key_F: (self.transformP, "h"),
+            Qt.Key_F | Qt.ShiftModifier: (self.transformP, "v")
+
+        }
+
     def setPTile(self, tileId):
         self.pTile = tileId
         if self.pTile != -1 and self.pTile not in self.modelList:
             self.modelList[self.pTile] = ModelManager.fetchTileById(self.pTile)
+
+    def getPOptions(self):
+        return (self.pOrientation, self.phFlip, self.pvFlip)
 
     def transformP(self, type):
         if type == "cw":
@@ -141,9 +162,9 @@ class GroupPreview(QWidget):
             self.pOrientation = (self.pOrientation + 3) % 4
         elif type == "h":
             self.phFlip = not self.phFlip
-
         elif type == "v":
             self.pvFlip = not self.pvFlip
+        self.updatePreview.emit()
 
     def calculateOffsets(self):
         self.numRows = self.groupModel.getNumRows()
@@ -184,7 +205,14 @@ class GroupPreview(QWidget):
                 self.drawPreviewTile(painter,
                                      self.mouseIndex[0], self.mouseIndex[1])
 
+    def keyPressEvent(self, event):
+        key = event.key() | int(event.modifiers())
+        if key in self.keyBindings:
+            command = self.keyBindings[key]
+            command[0](command[1])
+
     def mousePressEvent(self, QMouseEvent):
+
         if QMouseEvent.button() & Qt.LeftButton:
             self.mousePressed = True
             if self.mouseIndex != (-1, -1):
@@ -196,6 +224,7 @@ class GroupPreview(QWidget):
                 self.repaint()
 
     def mouseMoveEvent(self, QMouseEvent):
+        self.setFocus()
         prevIndex = self.mouseIndex
         self.mouseIndex = self.calcMouseIndex(QMouseEvent.pos())
         if(prevIndex != self.mouseIndex):
@@ -223,8 +252,8 @@ class GroupPreview(QWidget):
         painter.setPen(Qt.black)
         painter.setBrush(model.getBgColor())
         # painter.setBrush(Qt.white)
-        painter.drawRect(self.xOffset + self.tileSize * xInd,
-                         self.yOffset + self.tileSize * yInd,
+        painter.drawRect(int(self.xOffset + self.tileSize * xInd),
+                         int(self.yOffset + self.tileSize * yInd),
                          self.tileSize, self.tileSize)
         points = model.generatePointOffset(
             xInd, yInd, self.tileSize,
@@ -242,8 +271,8 @@ class GroupPreview(QWidget):
             if model is not None:
                 painter.setPen(Qt.red)
                 painter.setBrush(model.getBgColor())
-                painter.drawRect(self.xOffset + self.tileSize * xInd,
-                                 self.yOffset + self.tileSize * yInd,
+                painter.drawRect(int(self.xOffset + self.tileSize * xInd),
+                                 int(self.yOffset + self.tileSize * yInd),
                                  self.tileSize, self.tileSize)
                 points = model.generatePointOffset(
                     xInd, yInd, self.tileSize,
@@ -256,8 +285,8 @@ class GroupPreview(QWidget):
     def drawEmptyTile(self, painter, xInd, yInd):
         painter.setPen(Qt.black)
         painter.setBrush(Qt.white)
-        painter.drawRect(self.xOffset + self.tileSize * xInd,
-                         self.yOffset + self.tileSize * yInd,
+        painter.drawRect(int(self.xOffset + self.tileSize * xInd),
+                         int(self.yOffset + self.tileSize * yInd),
                          self.tileSize, self.tileSize)
 
     def drawErrorTile(self, painter, xInd, yInd):
