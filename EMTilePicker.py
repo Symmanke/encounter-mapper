@@ -14,12 +14,13 @@ class TilePicker(QWidget):
 
     currentIndex = -1
 
-    selectedTile = pyqtSignal()
+    selectedTile = pyqtSignal(int)
 
     def __init__(self):
         super(TilePicker, self).__init__()
         self.tileModels = []
         self.tileList = QListWidget()
+        self.tileList.itemClicked.connect(self.updateSelectedTile)
         self.addTileButton = QPushButton("New Tile")
         self.addTileButton.clicked.connect(self.newTileDialog)
         self.editTileButton = QPushButton("Edit Tile")
@@ -36,6 +37,11 @@ class TilePicker(QWidget):
         layout.addWidget(self.deleteTileButton)
         self.setLayout(layout)
         self.loadTiles()
+
+    def updateSelectedTile(self):
+        sr = self.tileList.currentRow()
+        if sr >= 0:
+            self.selectedTile.emit(self.tileModels[sr].getUid())
 
     def newTileDialog(self):
         self.tileDialog = QDialog()

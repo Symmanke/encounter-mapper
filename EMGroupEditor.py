@@ -1,8 +1,7 @@
 from PyQt5.QtCore import (Qt, pyqtSignal)
 from PyQt5.QtGui import (QPainter, QPolygon)
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
-                             QLineEdit, QPushButton, QSpinBox, QWidget,
-                             QListWidget, QDialog, QVBoxLayout)
+                             QLineEdit, QPushButton, QWidget)
 
 from EMTilePicker import TilePicker
 from EMModel import GroupModel
@@ -10,10 +9,15 @@ from EMHelper import ModelManager
 
 
 class GroupEditor(QWidget):
+
+    addModel = pyqtSignal()
+    cancelModel = pyqtSignal()
+
     def __init__(self, model=None):
         super(GroupEditor, self).__init__()
 
         self.groupModel = GroupModel() if model is None else model
+        self.groupModel.modelUpdated.connect(self.updateUI)
 
         titleGroup = QWidget()
         titleLayout = QHBoxLayout()
@@ -24,6 +28,7 @@ class GroupEditor(QWidget):
 
         self.groupPreview = GroupPreview(self.groupModel)
         self.tilePicker = TilePicker()
+        self.tilePicker.selectedTile.connect(self.groupPreview.setPTile)
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
         self.cwBtn = QPushButton("CW")
@@ -35,9 +40,13 @@ class GroupEditor(QWidget):
         self.vfBtn = QPushButton("--")
         self.vfBtn.clicked.connect(self.flipTileMapV)
         self.addRowBtn = QPushButton("Add Row")
+        self.addRowBtn.clicked.connect(self.addGroupRow)
         self.delRowBtn = QPushButton("Del Row")
+        self.delRowBtn.clicked.connect(self.delGroupRow)
         self.addColBtn = QPushButton("Add Col")
+        self.addColBtn.clicked.connect(self.addGroupCol)
         self.delColBtn = QPushButton("Del Col")
+        self.delColBtn.clicked.connect(self.delGroupCol)
 
         btnLayout.addWidget(self.cwBtn, 0, 0)
         btnLayout.addWidget(self.ccwBtn, 1, 0)
@@ -79,6 +88,23 @@ class GroupEditor(QWidget):
     def flipTileMapV(self):
         self.groupPreview.transformP("v")
 
+    def addGroupRow(self):
+        self.groupModel.addRow()
+
+    def addGroupCol(self):
+        self.groupModel.addCol()
+
+    def delGroupRow(self):
+        self.groupModel.delRow()
+
+    def delGroupCol(self):
+        self.groupModel.delCol()
+
+    def updateUI(self):
+        # TODO: fix update everything
+        self.groupPreview.calculateOffsets()
+        self.groupPreview.repaint()
+
 
 class GroupPreview(QWidget):
 
@@ -101,6 +127,12 @@ class GroupPreview(QWidget):
         self.pTile = 0
         self.modelList = self.createModelList()
         self.setMouseTracking(True)
+        self.mousePressed = False
+
+    def setPTile(self, tileId):
+        self.pTile = tileId
+        if self.pTile != -1 and self.pTile not in self.modelList:
+            self.modelList[self.pTile] = ModelManager.fetchTileById(self.pTile)
 
     def transformP(self, type):
         if type == "cw":
@@ -114,8 +146,10 @@ class GroupPreview(QWidget):
             self.pvFlip = not self.pvFlip
 
     def calculateOffsets(self):
-        self.xOffset = (500 - self.groupModel.getNumCols()*self.tileSize)/2
-        self.yOffset = (500 - self.groupModel.getNumRows()*self.tileSize)/2
+        self.numRows = self.groupModel.getNumRows()
+        self.numCols = self.groupModel.getNumCols()
+        self.xOffset = (500 - self.numCols*self.tileSize)/2
+        self.yOffset = (500 - self.numRows*self.tileSize)/2
 
     def createModelList(self):
         modelList = {}
@@ -146,23 +180,35 @@ class GroupPreview(QWidget):
                         else:
                             # draw actual tile
                             self.drawTile(painter, x, y, cachedTM, tile)
-            if self.mouseIndex != (-1, -1):
+            if self.mouseIndex != (-1, -1) and not self.mousePressed:
                 self.drawPreviewTile(painter,
                                      self.mouseIndex[0], self.mouseIndex[1])
 
     def mousePressEvent(self, QMouseEvent):
-        if self.mouseIndex != (-1, -1):
-            tile = (self.pTile, self.pOrientation, self.phFlip, self.pvFlip)
-            self.groupModel.setTileForIndex(
-                self.mouseIndex[0], self.mouseIndex[1], tile)
-            # perform stuff
-            self.repaint()
+        if QMouseEvent.button() & Qt.LeftButton:
+            self.mousePressed = True
+            if self.mouseIndex != (-1, -1):
+                tile = (self.pTile, self.pOrientation,
+                        self.phFlip, self.pvFlip)
+                self.groupModel.setTileForIndex(
+                    self.mouseIndex[0], self.mouseIndex[1], tile)
+                # perform stuff
+                self.repaint()
 
     def mouseMoveEvent(self, QMouseEvent):
         prevIndex = self.mouseIndex
         self.mouseIndex = self.calcMouseIndex(QMouseEvent.pos())
         if(prevIndex != self.mouseIndex):
+            if self.mousePressed and self.mouseIndex != (-1, -1):
+                tile = (self.pTile, self.pOrientation,
+                        self.phFlip, self.pvFlip)
+                self.groupModel.setTileForIndex(
+                    self.mouseIndex[0], self.mouseIndex[1], tile)
             self.repaint()
+
+    def mouseReleaseEvent(self, QMouseEvent):
+        self.mousePressed = False
+        self.repaint()
 
     def calcMouseIndex(self, mPoint):
         if mPoint.x() < self.xOffset or mPoint.y() < self.yOffset:

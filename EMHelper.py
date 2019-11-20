@@ -51,7 +51,6 @@ class ModelManager():
         cls.tileModelsByID.clear()
         for model in cls.tileModels:
             cls.tileModelsByID[model.getUid()] = model
-        print(cls.tileModelsByID)
 
     @classmethod
     def updateTileCache(cls, model):
