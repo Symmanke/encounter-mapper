@@ -12,6 +12,7 @@ class EMModelPicker(QWidget):
 
     selectedModel = pyqtSignal(int)
     updatedModel = pyqtSignal(int)
+    deletedModel = pyqtSignal(int)
 
     def __init__(self, modelName, modelClass, editorClass, modelPreviewClass):
         super(EMModelPicker, self).__init__()
@@ -113,7 +114,13 @@ class EMModelPicker(QWidget):
             self.updateUI()
 
     def deleteModel(self):
-        """TODO"""
+        sr = self.modelList.currentRow()
+        if sr >= 0:
+            uid = self.models[sr].getUid()
+            ModelManager.deleteModel(self.modelName, self.models[sr])
+            del self.models[sr]
+            self.updateUI()
+            self.deletedModel.emit(uid)
 
     def updateUI(self):
         self.modelList.clear()

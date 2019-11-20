@@ -139,6 +139,20 @@ class ModelManager():
             cls.saveModelToFile(name)
 
     @classmethod
+    def deleteModel(cls, name, model):
+        if name in cls.loadedModels:
+            modelType = cls.loadedModels[name]
+            uid = model.getUid()
+            # remove from main list
+            for m in modelType[cls.List]:
+                if m.getUid() == uid:
+                    modelType[cls.List].remove(m)
+                    break
+            # remove from UID cache
+            del modelType[cls.ByUid][uid]
+            cls.saveModelToFile(name)
+
+    @classmethod
     def loadPalette(cls):
         """"Todo"""
 

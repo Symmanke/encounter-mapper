@@ -34,6 +34,7 @@ class GroupEditor(QWidget):
                                         TileEditor, TilePreviewWidget)
         self.tilePicker.selectedModel.connect(self.groupPreview.setPTile)
         self.tilePicker.updatedModel.connect(self.updateGroupList)
+        self.tilePicker.deletedModel.connect(self.groupPreview.removeTileCache)
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
         self.cwBtn = QPushButton("CW")
@@ -192,6 +193,11 @@ class GroupPreview(QWidget):
         if id != -1:
             self.modelList[id] = ModelManager.fetchByUid(
                 ModelManager.TileName, id)
+
+    def removeTileCache(self, id):
+        if id != -1:
+            self.modelList[id] = None
+            self.repaint()
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
