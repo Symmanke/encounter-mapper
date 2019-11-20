@@ -3,9 +3,11 @@ from PyQt5.QtGui import (QPainter, QPolygon)
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
                              QLineEdit, QPushButton, QWidget)
 
-from EMTilePicker import TilePicker
-from EMModel import GroupModel
+# from EMTilePicker import TilePicker
+from EMModel import GroupModel, TileModel
+from EMTileEditor import TileEditor, TilePreviewWidget
 from EMHelper import ModelManager
+from EMModelPicker import EMModelPicker
 
 
 class GroupEditor(QWidget):
@@ -28,9 +30,10 @@ class GroupEditor(QWidget):
 
         self.groupPreview = GroupPreview(self.groupModel)
         self.groupPreview.updatePreview.connect(self.updateUI)
-        self.tilePicker = TilePicker()
-        self.tilePicker.selectedTile.connect(self.groupPreview.setPTile)
-        self.tilePicker.updatedTile.connect(self.updateGroupList)
+        self.tilePicker = EMModelPicker(ModelManager.TileName, TileModel,
+                                        TileEditor, TilePreviewWidget)
+        self.tilePicker.selectedModel.connect(self.groupPreview.setPTile)
+        self.tilePicker.updatedModel.connect(self.updateGroupList)
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
         self.cwBtn = QPushButton("CW")
@@ -155,6 +158,7 @@ class GroupPreview(QWidget):
 
     def setPTile(self, tileId):
         self.pTile = tileId
+        print(tileId)
         self.updateModelList(tileId)
 
     def getPOptions(self):
@@ -186,7 +190,8 @@ class GroupPreview(QWidget):
 
     def updateModelList(self, id):
         if id != -1:
-            self.modelList[self.pTile] = ModelManager.fetchTileById(id)
+            self.modelList[id] = ModelManager.fetchByUid(
+                ModelManager.TileName, id)
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)

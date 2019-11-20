@@ -4,9 +4,9 @@ import json
 
 
 class ModelManager():
-    TileName = "tiles"
-    GroupName = "groups"
-    PaletteName = "pallete"
+    TileName = "Tile"
+    GroupName = "Group"
+    PaletteName = "Palette"
 
     List = "List"
     ByUid = "ByUid"
@@ -37,17 +37,6 @@ class ModelManager():
         ModelManager.loadPalette()
 
     @classmethod
-    def saveModelToFile(cls, name):
-        modelJS = []
-        for model in cls.loadedModels[name][cls.List]:
-            modelJS.append(model.jsonObj())
-
-        text = json.dumps(modelJS)
-        f = open(name+".json", "w+")
-        f.write(text)
-        f.close()
-
-    @classmethod
     def loadModelFromFile(cls, name, classType):
         if name not in cls.loadedModels:
             # fetch data according to filename
@@ -58,7 +47,7 @@ class ModelManager():
                 jsContents = json.loads(contents)
                 f.close()
 
-                for modeljs in jsContents():
+                for modeljs in jsContents:
                     modelList.append(classType.createModelJS(modeljs))
                 modelDict = {
                     cls.List: modelList,
@@ -73,8 +62,19 @@ class ModelManager():
                 cls.createCache(name)
 
     @classmethod
+    def saveModelToFile(cls, name):
+        modelJS = []
+        for model in cls.loadedModels[name][cls.List]:
+            modelJS.append(model.jsonObj())
+
+        text = json.dumps(modelJS)
+        f = open(name+".json", "w+")
+        f.write(text)
+        f.close()
+
+    @classmethod
     def createCache(cls, name):
-        modelList = cls[name][cls.List]
+        modelList = cls.loadedModels[name][cls.List]
         idCache = cls.loadedModels[name][cls.ByUid]
         idCache.clear()
         for model in modelList:
@@ -90,12 +90,14 @@ class ModelManager():
         return None
 
     @classmethod
-    def fetchTiles(cls, modelName, keyword=None, searchType=None):
+    def fetchModels(cls, modelName, keyword=None, searchType=None):
         if modelName in cls.loadedModels:
             modelType = cls.loadedModels[modelName]
             if keyword is None or searchType is None:
-                return cls.copyModelList(modelType[cls.List], cls.ClassRef)
-            return cls.copyModelList(modelType[cls.List], cls.ClassRef)
+                return cls.copyModelList(
+                    modelType[cls.List], modelType[cls.ClassRef])
+            return cls.copyModelList(
+                modelType[cls.List], modelType[cls.ClassRef])
         return None
 
     @classmethod
@@ -133,7 +135,7 @@ class ModelManager():
                 modelType[cls.List].append(model)
             else:
                 modelType[cls.List].insert(index, model)
-            modelType[cls.ByUid][model.getUid] = model
+            modelType[cls.ByUid][model.getUid()] = model
             cls.saveModelToFile(name)
 
     @classmethod

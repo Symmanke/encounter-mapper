@@ -1,5 +1,5 @@
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
+from PyQt5.QtWidgets import (QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QWidget, QListWidget,
                              QListWidgetItem, QDialog)
 
@@ -28,17 +28,17 @@ class EMModelPicker(QWidget):
         self.models = []
 
         self.modelList = QListWidget()
-        self.modelList.itemClicked.connect(self.updateSelectedGroup)
-        self.addModelButton = QPushButton("New ".append(modelName))
+        self.modelList.itemClicked.connect(self.updateSelectedModel)
+        self.addModelButton = QPushButton("New " + modelName)
         self.addModelButton.clicked.connect(self.newModelDialog)
-        self.editModelButton = QPushButton("Edit ".append(modelName))
+        self.editModelButton = QPushButton("Edit " + modelName)
         self.editModelButton.clicked.connect(self.editModelDialog)
         self.duplicateModelButton = QPushButton("Duplicate")
         self.duplicateModelButton.clicked.connect(self.duplicateModel)
-        self.deleteModelButton = QPushButton("Delete ".append(modelName))
+        self.deleteModelButton = QPushButton("Delete " + modelName)
         self.deleteModelButton.clicked.connect(self.deleteModel)
         layout = QVBoxLayout()
-        layout.addWidget(self.ModelList)
+        layout.addWidget(self.modelList)
         layout.addWidget(self.addModelButton)
         layout.addWidget(self.editModelButton)
         layout.addWidget(self.duplicateModelButton)
@@ -47,84 +47,86 @@ class EMModelPicker(QWidget):
         self.loadModels()
 
     def updateSelectedModel(self):
-        sr = self.ModelList.currentRow()
+        sr = self.modelList.currentRow()
         if sr >= 0:
-            self.selectedModel.emit(self.ModelModels[sr].getUid())
+            print(self.models[sr].getUid())
+            self.selectedModel.emit(self.models[sr].getUid())
 
     def newModelDialog(self):
-        self.ModelDialog = QDialog()
+        self.modelDialog = QDialog()
         layout = QVBoxLayout()
-        self.ModelEditor = self.editorClass()
-        self.ModelEditor.addModel.connect(self.addNewModelModel)
-        self.ModelEditor.cancelModel.connect(self.cancelModelModel)
-        layout.addWidget(self.ModelEditor)
-        self.ModelDialog.setLayout(layout)
-        self.ModelDialog.exec_()
+        self.modelEditor = self.editorClass()
+        self.modelEditor.addModel.connect(self.addNewModel)
+        self.modelEditor.cancelModel.connect(self.cancelModel)
+        layout.addWidget(self.modelEditor)
+        self.modelDialog.setLayout(layout)
+        self.modelDialog.exec_()
 
     def editModelDialog(self):
-        sr = self.ModelList.currentRow()
+        sr = self.modelList.currentRow()
         if sr >= 0:
-            self.ModelDialog = QDialog()
+            self.modelDialog = QDialog()
             layout = QVBoxLayout()
-            tempCopy = self.modelClass.createModelCopy(self.ModelModels[sr])
+            tempCopy = self.modelClass.createModelCopy(self.models[sr])
 
-            self.ModelEditor = self.modelClass(tempCopy)
-            self.ModelEditor.addModel.connect(self.updateExistingModelModel)
-            self.ModelEditor.cancelModel.connect(self.cancelModelModel)
+            self.modelEditor = self.editorClass(tempCopy)
+            self.modelEditor.addModel.connect(self.updateExistingModel)
+            self.modelEditor.cancelModel.connect(self.cancelModel)
 
-            layout.addWidget(self.ModelEditor)
-            self.ModelDialog.setLayout(layout)
-            self.ModelDialog.exec_()
+            layout.addWidget(self.modelEditor)
+            self.modelDialog.setLayout(layout)
+            self.modelDialog.exec_()
 
     def addNewModel(self):
-        ModelModel = self.ModelEditor.getCurrentModel()
-        ModelManager.addModel(ModelModel)
-        self.ModelModels.append(ModelModel)
-        self.ModelDialog.close()
-        self.ModelDialog = None
-        self.ModelEditor = None
+        model = self.modelEditor.getCurrentModel()
+        ModelManager.addModel(self.modelName, model)
+        self.models.append(model)
+        self.modelDialog.close()
+        self.modelDialog = None
+        self.modelEditor = None
         self.updateUI()
 
     def updateExistingModel(self):
-        ModelModel = self.ModelEditor.getCurrentModel()
-        ModelManager.updateModel(ModelModel)
-        self.ModelModels[self.ModelList.currentRow()] = ModelModel
-        self.ModelDialog.close()
-        self.ModelDialog = None
-        self.ModelEditor = None
+        model = self.modelEditor.getCurrentModel()
+        ModelManager.updateModel(self.modelName, model)
+        self.models[self.modelList.currentRow()] = model
+        self.modelDialog.close()
+        self.modelDialog = None
+        self.modelEditor = None
         self.updateUI()
-        self.updatedModel.emit(ModelModel.getUid())
+        self.updatedModel.emit(model.getUid())
 
-    def cancelModelModel(self):
-        self.ModelDialog.close()
-        self.ModelDialog = None
-        self.ModelEditor = None
+    def cancelModel(self):
+        self.modelDialog.close()
+        self.modelDialog = None
+        self.modelEditor = None
 
     def duplicateModel(self):
-        sr = self.ModelList.currentRow()
+        sr = self.modelList.currentRow()
         if sr >= 0:
-            dupe = model.createModelCopy(self.ModelModels[sr])
+            dupe = self.modelClass.createModelCopy(self.models[sr])
 
             name = "{}_copy".format(dupe.getName())
             dupe.setName(name)
-            ModelManager.addModel(dupe, sr)
-            self.ModelModels.insert(sr, dupe)
+            ModelManager.addModel(self.modelName, dupe, sr)
+            self.models.insert(sr, dupe)
             self.updateUI()
 
     def deleteModel(self):
         """TODO"""
 
     def updateUI(self):
-        self.ModelList.clear()
-        for model in self.ModelModels:
-            listItemWidget = ModelPickerListItem(model)
-            listItem = QListWidgetItem(self.ModelList)
+        self.modelList.clear()
+        for model in self.models:
+            listItemWidget = ModelPickerListItem(self.modelPreviewClass, model)
+            listItem = QListWidgetItem(self.modelList)
             listItem.setSizeHint(listItemWidget.sizeHint())
 
-            self.ModelList.addItem(listItem)
-            self.ModelList.setItemWidget(listItem, listItemWidget)
+            self.modelList.addItem(listItem)
+            self.modelList.setItemWidget(listItem, listItemWidget)
 
     def loadModels(self):
+        ModelManager.loadModelFromFile(self.modelName, self.modelClass)
         self.models = ModelManager.fetchModels(self.modelName)
         self.updateUI()
 
@@ -139,7 +141,7 @@ class ModelPickerListItem(QWidget):
         self.model = model
         if model is not None:
             layout = QHBoxLayout()
-            self.preview = previewClass.previewWidget(self.ModelModel)
+            self.preview = previewClass.previewWidget(self.model)
             layout.addWidget(self.preview)
             layout.addWidget(QLabel(self.model.getName()))
             self.setLayout(layout)

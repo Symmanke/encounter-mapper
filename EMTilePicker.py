@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
 from EMTileEditor import TileEditor, TilePreviewWidget
 from EMModel import TileModel
 from EMHelper import ModelManager
+from EMModelPicker import EMModelPicker
 
 
 class TilePicker(QWidget):
@@ -71,7 +72,8 @@ class TilePicker(QWidget):
 
     def addNewTileModel(self):
         tileModel = self.tileEditor.getCurrentModel()
-        ModelManager.addTile(tileModel)
+        # ModelManager.addTile(tileModel)
+        ModelManager.addModel(ModelManager.TileName, tileModel)
         self.tileModels.append(tileModel)
         self.tileDialog.close()
         self.tileDialog = None
@@ -80,7 +82,8 @@ class TilePicker(QWidget):
 
     def updateExistingTileModel(self):
         tileModel = self.tileEditor.getCurrentModel()
-        ModelManager.updateTile(tileModel)
+        ModelManager.updateModel(ModelManager.TileName, tileModel)
+        # ModelManager.updateTile(tileModel)
         self.tileModels[self.tileList.currentRow()] = tileModel
         self.tileDialog.close()
         self.tileDialog = None
@@ -100,7 +103,8 @@ class TilePicker(QWidget):
 
             name = "{}_copy".format(dupe.getName())
             dupe.setName(name)
-            ModelManager.addTile(dupe, sr)
+            ModelManager.addModel(ModelManager.TileName, dupe, sr)
+            # ModelManager.addTile(dupe, sr)
             self.tileModels.insert(sr, dupe)
             self.updateUI()
 
@@ -118,7 +122,8 @@ class TilePicker(QWidget):
             self.tileList.setItemWidget(listItem, listItemWidget)
 
     def loadTiles(self):
-        self.tileModels = ModelManager.fetchTiles()
+        ModelManager.loadModelFromFile(ModelManager.TileName, TileModel)
+        self.tileModels = ModelManager.fetchModels(ModelManager.TileName)
         self.updateUI()
 
     def appendTile(self, tilejs):
@@ -143,7 +148,9 @@ class TilePickerListItem(QWidget):
 def main():
     app = QApplication([])
 
-    mainWidget = TilePicker()
+    mainWidget = EMModelPicker(ModelManager.TileName, TileModel,
+                               TileEditor, TilePreviewWidget)
+    # mainWidget = TilePicker()
     mainWidget.show()
     app.exec_()
 
