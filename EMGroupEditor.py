@@ -105,7 +105,6 @@ class GroupEditor(QWidget):
         self.groupModel.delCol()
 
     def updateGroupList(self, id):
-        print("updating after id {} has been edited".format(id))
         self.groupPreview.updateModelList(id)
         self.groupPreview.repaint()
 
@@ -156,7 +155,6 @@ class GroupPreview(QWidget):
 
     def setPTile(self, tileId):
         self.pTile = tileId
-        print("setting tileId to {}".format(tileId))
         self.updateModelList(tileId)
 
     def getPOptions(self):

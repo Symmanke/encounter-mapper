@@ -4,6 +4,19 @@ import json
 
 
 class ModelManager():
+    TileName = "tiles"
+    GroupName = "groups"
+    PaletteName = "pallete"
+
+    List = "List"
+    ByUid = "ByUid"
+    ByTag = "ByTag"
+    ByName = "ByName"
+    NextUid = "NextUid"
+    ClassRef = "ClassRef"
+
+    loadedModels = {}
+
     paletteModels = None
 
     tileModels = None
@@ -22,6 +35,106 @@ class ModelManager():
         ModelManager.loadPalette()
         ModelManager.loadTiles()
         ModelManager.loadPalette()
+
+    @classmethod
+    def saveModelToFile(cls, name):
+        modelJS = []
+        for model in cls.loadedModels[name][cls.List]:
+            modelJS.append(model.jsonObj())
+
+        text = json.dumps(modelJS)
+        f = open(name+".json", "w+")
+        f.write(text)
+        f.close()
+
+    @classmethod
+    def loadModelFromFile(cls, name, classType):
+        if name not in cls.loadedModels:
+            # fetch data according to filename
+            modelList = []
+            f = open(name+".json", "r")
+            if f.mode == "r":
+                contents = f.read()
+                jsContents = json.loads(contents)
+                f.close()
+
+                for modeljs in jsContents():
+                    modelList.append(classType.createModelJS(modeljs))
+                modelDict = {
+                    cls.List: modelList,
+                    cls.ByUid: {},
+                    cls.ByName: {},
+                    cls.ByTag: {},
+                    cls.NextUid: 0,
+                    cls.ClassRef: classType
+                }
+
+                cls.loadedModels[name] = modelDict
+                cls.createCache(name)
+
+    @classmethod
+    def createCache(cls, name):
+        modelList = cls[name][cls.List]
+        idCache = cls.loadedModels[name][cls.ByUid]
+        idCache.clear()
+        for model in modelList:
+            idCache[model.getUid()] = model
+
+    @classmethod
+    def fetchByUid(cls, modelName, uid):
+        if modelName in cls.loadedModels:
+            uidDict = cls.loadedModels[modelName][cls.ByUid]
+            cr = cls.loadedModels[modelName][cls.ClassRef]
+            if uid in uidDict:
+                return cr.createModelCopy(uidDict[uid])
+        return None
+
+    @classmethod
+    def fetchTiles(cls, modelName, keyword=None, searchType=None):
+        if modelName in cls.loadedModels:
+            modelType = cls.loadedModels[modelName]
+            if keyword is None or searchType is None:
+                return cls.copyModelList(modelType[cls.List], cls.ClassRef)
+            return cls.copyModelList(modelType[cls.List], cls.ClassRef)
+        return None
+
+    @classmethod
+    def copyModelList(cls, list, classRef):
+        copiedList = []
+        for model in list:
+            copiedList.append(classRef.createModelCopy(model))
+        return copiedList
+
+    def generateNextUid(cls, modelName):
+        if modelName in cls.loadedModels:
+            modelType = cls.loadedModels[modelName]
+            uid = modelType[cls.NextUid]
+            while uid in modelType[cls.ByUid]:
+                uid += 1
+            modelType[cls.NextUid] = uid
+            return uid
+        return -1
+
+    @classmethod
+    def updateModel(cls, name, model):
+        if name in cls.loadedModels:
+            modelType = cls.loadedModels[name]
+            if model.getUid() in modelType[cls.ByUid]:
+                mainModel = modelType[cls.ByUid][model.getUid()]
+                mainModel.updateModel(model)
+                cls.saveModelToFile(name)
+
+    @classmethod
+    def addModel(cls, name, model, index=-1):
+        if name in cls.loadedModels:
+            model.setUid(cls.generateNextUid(cls, name))
+            modelType = cls.loadedModels[name]
+            if(index < 0):
+                modelType[cls.List].append(model)
+            else:
+                modelType[cls.List].insert(index, model)
+            modelType[cls.ByUid][model.getUid] = model
+            cls.saveModelToFile(name)
 
     @classmethod
     def loadPalette(cls):
