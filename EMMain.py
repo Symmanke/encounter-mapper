@@ -4,9 +4,13 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
                              QVBoxLayout, QWidget)
 
-from EMMapWidget import EMMapWidget
+# from EMMapWidget import EMMapWidget
 from EMNotesTab import EMNotesTab
-from EMTilePicker import EMTilePicker
+from EMModelPicker import EMModelPicker
+from EMTileEditor import TileEditor, TilePreviewWidget
+from EMModel import TileModel, GroupModel
+from EMHelper import ModelManager
+from EMGroupEditor import GroupEditor, GroupPreview
 
 
 class EMMain(object):
@@ -60,13 +64,15 @@ tab1 = QWidget()
 tab2 = QWidget()
 
 
-tabWidget.addTab(EMTilePicker(), "Tiles")
-tabWidget.addTab(QWidget(), "Groups")
+tabWidget.addTab(EMModelPicker(ModelManager.TileName, TileModel,
+                               TileEditor, TilePreviewWidget), "Tiles")
+tabWidget.addTab(EMModelPicker(ModelManager.GroupName, GroupModel,
+                               GroupEditor, GroupPreview), "Groups")
 tabWidget.addTab(setTilesLayout(), "Objects")
 tabWidget.addTab(EMNotesTab(), "Notes")
 
 # mainLayout.addWidget(QLabel("TBD"))
-mainLayout.addWidget(EMMapWidget())
+mainLayout.addWidget(QWidget())
 mainLayout.addWidget(tabWidget)
 
 mainWidget.setLayout(mainLayout)

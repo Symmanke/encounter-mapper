@@ -6,8 +6,10 @@ class EMModel(QObject):
 
     modelUpdated = pyqtSignal()
 
-    def __init__(self, uid=-1):
+    def __init__(self, name, tags="", uid=-1):
         super(EMModel, self).__init__()
+        self.name = name
+        self.tags = tags
         self.uid = uid
 
     def getUid(self):
@@ -15,6 +17,18 @@ class EMModel(QObject):
 
     def setUid(self, uid):
         self.uid = uid
+
+    def getName(self):
+        return self.name
+
+    def setName(self, name):
+        self.name = name
+
+    def getTags(self):
+        return self.tags
+
+    def setTags(self, tags):
+        self.tags = tags
 
     def updateModel(self, model):
         print("Warning: NEED to implement")
@@ -36,7 +50,7 @@ class EMModel(QObject):
 class TileModel(EMModel):
     def __init__(self, name="new layer", pointList=None,
                  fgTupe=None, bgTupe=None, uid=-1):
-        super(TileModel, self).__init__(uid)
+        super(TileModel, self).__init__(name, "", uid)
         self.name = name
         self.pointList = []
         if pointList is not None:
@@ -64,7 +78,7 @@ class TileModel(EMModel):
     def createModelJS(cls, modelJS):
         fg = modelJS["fg"]
         bg = modelJS["bg"]
-        model = cls(modelJS["name"], modelJS["points"],
+        model = cls(modelJS["name"], modelJS["points"][0],
                     (fg["r"], fg["g"], fg["b"]),
                     (bg["r"], bg["g"], bg["b"]),
                     modelJS["uid"])
@@ -75,12 +89,6 @@ class TileModel(EMModel):
 
     def setFgColor(self, r, g, b):
         self.fgColor = QColor(r, g, b)
-
-    def setName(self, name):
-        self.name = name
-
-    def getName(self):
-        return self.name
 
     def addPoint(self, x, y):
         # if self.selectedIndex == -1:
@@ -209,7 +217,7 @@ class TileModel(EMModel):
 
         return {
             "name": self.name,
-            "points": self.pointList,
+            "points": [self.pointList],
             "uid": self.uid,
             "fg": {
                 "r": self.fgColor.red(),
@@ -221,14 +229,13 @@ class TileModel(EMModel):
                 "g": self.bgColor.green(),
                 "b": self.bgColor.blue(),
             }
-
         }
 
 
 class GroupModel(EMModel):
-    def __init__(self, name="new grid", tileGrid=None,
+    def __init__(self, name="new group", tileGrid=None,
                  ttf=None, uid=-1):
-        super(GroupModel, self).__init__(uid)
+        super(GroupModel, self).__init__(name, "", uid)
         self.name = name
         if tileGrid is None:
             self.tileGrid = []
@@ -244,6 +251,26 @@ class GroupModel(EMModel):
             self.cols = 0 if self.rows == 0 else len(self.tileGrid[0])
         self.tilesToFetch = self.generateTilesToFetch() if ttf is None else ttf
 
+    @classmethod
+    def createModelJS(cls, modelJS):
+        model = cls(modelJS["name"], modelJS["grid"],
+                    None, modelJS["uid"])
+        return model
+
+    @classmethod
+    def createModelCopy(cls, model):
+        mcopy = cls(model.getName(), model.getTileGrid(),
+                    None, model.getUid())
+        return mcopy
+
+    def jsonObj(self):
+        return {
+            "name": self.name,
+            "grid": self.tileGrid,
+            "ttf": self.tilesToFetch,
+            "uid": self.uid,
+        }
+
     def getTileGrid(self):
         return self.tileGrid
 
@@ -255,12 +282,6 @@ class GroupModel(EMModel):
 
     def getTilesToFetch(self):
         return self.tilesToFetch
-
-    def getGroupName(self):
-        return self.name
-
-    def setGroupName(self, name):
-        self.name = name
 
     def setTileForIndex(self, x, y, tile):
         self.tileGrid[y][x] = tile

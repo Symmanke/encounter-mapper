@@ -25,6 +25,7 @@ class GroupEditor(QWidget):
         titleLayout = QHBoxLayout()
         titleLayout.addWidget(QLabel("Group Title:"))
         self.titleEdit = QLineEdit()
+        self.titleEdit.textChanged.connect(self.updateModelName)
         titleLayout.addWidget(self.titleEdit)
         titleGroup.setLayout(titleLayout)
 
@@ -69,6 +70,8 @@ class GroupEditor(QWidget):
         bottomGroup = QWidget()
         bottomLayout = QHBoxLayout()
         self.applyBtn = QPushButton("Apply")
+        self.applyBtn.clicked.connect(self.addModel.emit)
+        self.applyBtn.clicked.connect(self.cancelModel.emit)
         self.cancelBtn = QPushButton("Cancel")
 
         bottomLayout.addWidget(self.applyBtn)
@@ -108,9 +111,15 @@ class GroupEditor(QWidget):
     def delGroupCol(self):
         self.groupModel.delCol()
 
+    def updateModelName(self):
+        self.groupModel.setName(self.titleEdit.text())
+
     def updateGroupList(self, id):
         self.groupPreview.updateModelList(id)
         self.groupPreview.repaint()
+
+    def getCurrentModel(self):
+        return self.groupModel
 
     def updateUI(self):
         # update Buttons
@@ -118,6 +127,7 @@ class GroupEditor(QWidget):
         self.hfBtn.setChecked(options[1])
         self.vfBtn.setChecked(options[2])
         self.btnGroup.repaint()
+        self.titleEdit.setText(self.groupModel.getName())
         # update the preview
         self.groupPreview.calculateOffsets()
         self.groupPreview.repaint()
@@ -157,6 +167,10 @@ class GroupPreview(QWidget):
 
         }
 
+    @classmethod
+    def previewWidget(cls, model):
+        return cls(model)
+
     def setPTile(self, tileId):
         self.pTile = tileId
         print(tileId)
@@ -183,7 +197,6 @@ class GroupPreview(QWidget):
         self.yOffset = (500 - self.numRows*self.tileSize)/2
 
     def createModelList(self):
-
         for id in self.groupModel.getTilesToFetch():
             self.updateModelList(id)
         if self.pTile != -1 and self.pTile not in self.modelList:
