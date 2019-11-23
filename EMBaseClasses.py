@@ -51,7 +51,6 @@ class EMModelPicker(QWidget):
     def updateSelectedModel(self):
         sr = self.modelList.currentRow()
         if sr >= 0:
-            print(self.models[sr].getUid())
             self.selectedModel.emit(self.models[sr].getUid())
 
     def newModelDialog(self):
@@ -162,6 +161,8 @@ class EMModelEditor(QWidget):
     def __init__(self, model=None):
         super(EMModelEditor, self).__init__()
         self.model = model
+        if self.model is not None:
+            self.model.modelUpdated.connect(self.updateUI)
         self.applyBtn = QPushButton("Apply")
         self.applyBtn.clicked.connect(self.applyModel.emit)
         self.cancelBtn = QPushButton("Cancel")
@@ -170,6 +171,7 @@ class EMModelEditor(QWidget):
         self.modelNameEdit.textChanged.connect(self.updateModelName)
         self.modelTagsEdit = QLineEdit()
         self.modelNameEdit.textChanged.connect(self.updateModelTags)
+        self.setMouseTracking(True)
 
     def updateModelName(self):
         self.model.setName(self.modelNameEdit.text())
@@ -180,11 +182,18 @@ class EMModelEditor(QWidget):
     def getModel(self):
         return self.model
 
+    def updateUI(self):
+        # must implement this class
+        pass
+
 
 class EMModelGraphics(QWidget):
+
+    updatePreview = pyqtSignal()
+
     def __init__(self, model=None, rows=1, cols=1,
                  tileSize=100, width=500, height=500,
-                 pOptions=(-1, 0, False, False), preview=False):
+                 preview=False, cached=False, pOptions=None):
         super(EMModelGraphics, self).__init__()
         self.model = model
         self.numRows = rows
@@ -193,8 +202,15 @@ class EMModelGraphics(QWidget):
         self.width = width
         self.height = height
         self.preview = preview
-        self.pOptions = pOptions
+        self.pOptions = [-1, 1, False, False] if pOptions is None else pOptions
         self.modelList = {}
+        self.mouseIndex = (-1, -1)
+        self.mousePressed = False
+        if cached:
+            self.createModelList()
+
+        self.setMinimumHeight(height)
+        self.setMinimumWidth(width)
         self.setMouseTracking(True)
         self.calculateOffsets()
 
@@ -214,14 +230,17 @@ class EMModelGraphics(QWidget):
             self.modelList[id] = ModelManager.fetchByUid(
                 ModelManager.TileName, id)
 
+    def getPOptions(self):
+        return (self.pOptions[0], self.pOptions[1],
+                self.pOptions[2], self.pOptions[3])
+
     def calculateOffsets(self):
         self.xOffset = (self.width - self.numCols*self.tileSize)/2
         self.yOffset = (self.height - self.numRows*self.tileSize)/2
 
     def drawTile(self, painter, xInd, yInd, model,
-                 options=(0, 0, False, False)):
-        previewBGColor = Qt.white if self.preview else Qt.Black
-        painter.setPen(previewBGColor)
+                 options=(-1, 0, False, False), previewTile=False):
+        painter.setPen(Qt.red if previewTile else Qt.black)
         painter.setBrush(model.getBgColor())
         painter.drawRect(int(self.xOffset + self.tileSize * xInd),
                          int(self.yOffset + self.tileSize * yInd),
@@ -231,14 +250,14 @@ class EMModelGraphics(QWidget):
             self.xOffset, self.yOffset,
             options[1], options[2], options[3])
         fg = model.getFgColor()
-        painter.setPen(fg)
+        painter.setPen(Qt.red if previewTile else fg)
         painter.setBrush(fg)
         poly = QPolygon(points)
         painter.drawPolygon(poly)
 
     def drawPreviewTile(self, painter, xInd, yInd):
-        if self.pTile in self.modelList:
-            model = self.modelList[self.pTile]
+        if self.pOptions[0] in self.modelList:
+            model = self.modelList[self.pOptions[0]]
             if model is not None:
                 painter.setPen(Qt.red)
                 painter.setBrush(model.getBgColor())
@@ -248,7 +267,7 @@ class EMModelGraphics(QWidget):
                 points = model.generatePointOffset(
                     xInd, yInd, self.tileSize,
                     self.xOffset, self.yOffset,
-                    self.pOrientation, self.phFlip, self.pvFlip)
+                    self.pOptions[1], self.pOptions[2], self.pOptions[3])
                 painter.setBrush(model.getFgColor())
                 poly = QPolygon(points)
                 painter.drawPolygon(poly)

@@ -57,7 +57,7 @@ class EMModelPicker(QWidget):
         self.modelDialog = QDialog()
         layout = QVBoxLayout()
         self.modelEditor = self.editorClass()
-        self.modelEditor.addModel.connect(self.addNewModel)
+        self.modelEditor.applyModel.connect(self.addNewModel)
         self.modelEditor.cancelModel.connect(self.cancelModel)
         layout.addWidget(self.modelEditor)
         self.modelDialog.setLayout(layout)
@@ -71,7 +71,7 @@ class EMModelPicker(QWidget):
             tempCopy = self.modelClass.createModelCopy(self.models[sr])
 
             self.modelEditor = self.editorClass(tempCopy)
-            self.modelEditor.addModel.connect(self.updateExistingModel)
+            self.modelEditor.applyModel.connect(self.updateExistingModel)
             self.modelEditor.cancelModel.connect(self.cancelModel)
 
             layout.addWidget(self.modelEditor)
@@ -79,7 +79,7 @@ class EMModelPicker(QWidget):
             self.modelDialog.exec_()
 
     def addNewModel(self):
-        model = self.modelEditor.getCurrentModel()
+        model = self.modelEditor.getModel()
         ModelManager.addModel(self.modelName, model)
         self.models.append(model)
         self.modelDialog.close()
@@ -88,7 +88,7 @@ class EMModelPicker(QWidget):
         self.updateUI()
 
     def updateExistingModel(self):
-        model = self.modelEditor.getCurrentModel()
+        model = self.modelEditor.getModel()
         ModelManager.updateModel(self.modelName, model)
         self.models[self.modelList.currentRow()] = model
         self.modelDialog.close()

@@ -1,14 +1,15 @@
 from PyQt5.QtCore import (Qt, pyqtSignal)
-from PyQt5.QtGui import (QPainter, QPolygon)
+from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
-                             QLineEdit, QPushButton, QSpinBox, QWidget,
+                             QPushButton, QSpinBox, QWidget,
                              QListWidget, QDialog, QVBoxLayout)
 
 from EMPaletteEditor import EMPaletteEditor
 from EMModel import TileModel
+from EMBaseClasses import EMModelEditor, EMModelGraphics
 
 
-class TileEditor(QWidget):
+class TileEditor(EMModelEditor):
     selectingColor = ""
     paletteDialog = None
     paletteEditor = None
@@ -17,11 +18,9 @@ class TileEditor(QWidget):
     cancelModel = pyqtSignal()
 
     def __init__(self, model=None):
-        super(TileEditor, self).__init__()
+        super(TileEditor, self).__init__(model)
         layout = QGridLayout()
         self.previewWidget = TilePreviewWidget()
-        self.tileName = QLineEdit()
-        self.tileName.textChanged.connect(self.updateModelName)
         self.tilePointList = QListWidget()
         self.tilePointList.itemClicked.connect(self.updateCurrentItem)
         self.pointXEdit = QSpinBox()
@@ -71,7 +70,7 @@ class TileEditor(QWidget):
 
         layout.addWidget(self.previewWidget, 0, 0, 7, 1)
         layout.addWidget(QLabel("Tile Name:"), 0, 1)
-        layout.addWidget(self.tileName, 0, 2, 1, 3)
+        layout.addWidget(self.modelNameEdit, 0, 2, 1, 3)
         layout.addWidget(QLabel("X:"), 1, 1)
         layout.addWidget(self.pointXEdit, 1, 2)
         layout.addWidget(QLabel("Y:"), 1, 3)
@@ -80,68 +79,58 @@ class TileEditor(QWidget):
         layout.addWidget(self.buttonHolder, 6, 1, 1, 4)
 
         # buttons to add fhe model
-        self.addModelBtn = QPushButton("Apply")
-        self.addModelBtn.clicked.connect(self.addTile)
-        self.cancelBtn = QPushButton("Cancel")
-        self.cancelBtn.clicked.connect(self.cancelTile)
         acbtn = QWidget()
         hbox = QHBoxLayout()
-        hbox.addWidget(self.addModelBtn)
+        hbox.addWidget(self.applyBtn)
         hbox.addWidget(self.cancelBtn)
         acbtn.setLayout(hbox)
         layout.addWidget(acbtn, 7, 0, 1, 5)
 
         self.setLayout(layout)
-        if model is None:
-            self.tileModel = TileModel("tileName", [(50, 50)])
-        else:
-            self.tileModel = model
-        self.tileModel.modelUpdated.connect(self.updateUI)
-        self.previewWidget.setModel(self.tileModel)
-
+        self.previewWidget.setModel(self.model)
         self.updateUI()
 
     def addPoint(self):
-        self.tileModel.addPoint(self.pointXEdit.value(),
-                                self.pointYEdit.value())
+        self.model.addPoint(self.pointXEdit.value(),
+                            self.pointYEdit.value())
 
     def deletePoint(self):
-        self.tileModel.deleteSelectedPoint()
+        self.model.deleteSelectedPoint()
 
     def moveUpPoint(self):
-        swap = self.tileModel.getSelectedIndex() - 1
+        swap = self.model.getSelectedIndex() - 1
         if swap < 0:
-            swap = len(self.tileModel.getPoints())-1
-        self.tileModel.swapPointSelected(swap)
+            swap = len(self.model.getPoints())-1
+        self.model.swapPointSelected(swap)
 
     def moveDownPoint(self):
-        swap = self.tileModel.getSelectedIndex() + 1
-        if swap >= len(self.tileModel.getPoints()):
+        swap = self.model.getSelectedIndex() + 1
+        if swap >= len(self.model.getPoints()):
             swap = 0
-        self.tileModel.swapPointSelected(swap)
+        self.model.swapPointSelected(swap)
 
     def updatePointPosition(self):
         index = self.tilePointList.currentRow()
-        self.tileModel.updatePoint(index, self.pointXEdit.value(),
-                                   self.pointYEdit.value())
+        self.model.updatePoint(index, self.pointXEdit.value(),
+                               self.pointYEdit.value())
 
     def rotCW(self):
-        self.tileModel.transformRotate(True)
+        self.model.transformRotate(True)
 
     def rotCCW(self):
-        self.tileModel.transformRotate(False)
+        self.model.transformRotate(False)
 
     def flipH(self):
-        self.tileModel.transformFlip(True)
+        self.model.transformFlip(True)
 
     def flipV(self):
-        self.tileModel.transformFlip(False)
+        self.model.transformFlip(False)
 
     def setFGColor(self):
         self.paletteDialog = QDialog()
         layout = QVBoxLayout()
 
-        fg = self.tileModel.getFgColor()
+        fg = self.model.getFgColor()
         self.selectingColor = "fg"
         self.paletteEditor = EMPaletteEditor(fg.red(), fg.green(), fg.blue())
         self.paletteEditor.colorApplied.connect(self.applyColorChange)
@@ -153,7 +142,7 @@ class TileEditor(QWidget):
         # self.paletteEditor.show()
 
     def setBGColor(self):
-        bg = self.tileModel.getFgColor()
+        bg = self.model.getFgColor()
         layout = QVBoxLayout()
 
         self.paletteDialog = QDialog()
@@ -169,9 +158,9 @@ class TileEditor(QWidget):
 
     def applyColorChange(self, r, g, b):
         if self.selectingColor == "bg":
-            self.tileModel.setBgColor(r, g, b)
+            self.model.setBgColor(r, g, b)
         elif self.selectingColor == "fg":
-            self.tileModel.setFgColor(r, g, b)
+            self.model.setFgColor(r, g, b)
         self.selectingColor = ""
         self.paletteDialog.close()
         self.paletteDialog = None
@@ -184,37 +173,34 @@ class TileEditor(QWidget):
         self.paletteEditor = None
 
     def setModel(self, model):
-        self.tileModel = model
-        self.tileModel.modelUpdated.connect(self.updateUI)
+        self.model = model
+        self.model.modelUpdated.connect(self.updateUI)
         self.previewWidget.setModel(model)
         self.updateUI()
 
     def updateCurrentItem(self):
-        self.tileModel.setSelectedIndex(self.tilePointList.currentRow())
-
-    def updateModelName(self):
-        self.tileModel.setName(self.tileName.text())
+        self.model.setSelectedIndex(self.tilePointList.currentRow())
 
     def updateUI(self):
         self.reloadPointList()
         self.previewWidget.repaint()
         self.updateCurrentValues()
-        self.tileName.setText(self.tileModel.getName())
+        self.modelNameEdit.setText(self.model.getName())
         self.enableButtons()
 
     def reloadPointList(self):
         self.tilePointList.clear()
-        points = self.tileModel.getPoints()
+        points = self.model.getPoints()
         for i in range(len(points)):
             point = points[i]
             self.tilePointList.addItem("{}. ({}, {})"
                                        .format(i+1, point[0], point[1]))
-        self.tilePointList.setCurrentRow(self.tileModel.getSelectedIndex())
+        self.tilePointList.setCurrentRow(self.model.getSelectedIndex())
 
     def updateCurrentValues(self):
-        currentIndex = self.tileModel.getSelectedIndex()
+        currentIndex = self.model.getSelectedIndex()
         if(currentIndex != -1):
-            point = self.tileModel.getPoints()[currentIndex]
+            point = self.model.getPoints()[currentIndex]
             self.pointXEdit.setValue(point[0])
             self.pointYEdit.setValue(point[1])
         else:
@@ -222,7 +208,7 @@ class TileEditor(QWidget):
             self.pointYEdit.setValue(50)
 
     def enableButtons(self):
-        num = self.tileModel.getNumPoints()
+        num = self.model.getNumPoints()
         self.delPointBtn.setEnabled(num > 0)
         self.upPointBtn.setEnabled(num > 1)
         self.downPointBtn.setEnabled(num > 1)
@@ -241,11 +227,8 @@ class TileEditor(QWidget):
         """Todo"""
         self.cancelModel.emit()
 
-    def getCurrentModel(self):
-        return self.tileModel
 
-
-class TilePreviewWidget(QWidget):
+class TilePreviewWidget(EMModelGraphics):
     """
     widget that displays the preview of the object.
     """
@@ -253,52 +236,35 @@ class TilePreviewWidget(QWidget):
     pointSelected = pyqtSignal(int)
     pointDragged = pyqtSignal(int, int)
 
-    def __init__(self, size=500, border=10, preview=False, model=None):
-        super(TilePreviewWidget, self).__init__()
-        self.size = size
-        self.borderOffset = border
-        self.setMinimumHeight(self.size+(self.borderOffset*2))
-        self.setMinimumWidth(self.size+(self.borderOffset*2))
-        self.isPreview = preview
-        self.tileModel = model
+    def __init__(self, tileSize=500, border=10, model=None, preview=False):
+        super(TilePreviewWidget, self).__init__(model, 1, 1, tileSize,
+                                                tileSize + (border * 2),
+                                                tileSize + (border * 2),
+                                                preview)
+        self.binkedPoint = False
 
     # Class method for constructing different ones
     @classmethod
     def previewWidget(cls, model):
-        return cls(50, 0, True, model)
+        return cls(50, 0, model, True)
 
     def setModel(self, model):
-        self.tileModel = model
+        self.model = model
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
-        if(self.tileModel is not None):
-            # Set background
-            painter.setBrush(self.tileModel.getBgColor())
-            painter.drawRect(self.borderOffset, self.borderOffset,
-                             self.size, self.size)
-            # Grab points for drawing of polygons + other stuff
-            points = self.tileModel.generatePointOffset(
-                0, 0, self.size, self.borderOffset, self.borderOffset)
-
-            # draw FG if possible
-            if len(self.tileModel.getPoints()) > 1:
-                self.drawForegroundPoly(painter, points)
-            if not self.isPreview:
+        if(self.model is not None):
+            self.drawTile(painter, 0, 0, self.model)
+            if not self.preview:
+                points = self.model.generatePointOffset(
+                    0, 0, self.tileSize, self.xOffset, self.yOffset)
                 self.drawPointObjects(painter, points)
-
-    def drawForegroundPoly(self, painter, points):
-        fg = self.tileModel.getFgColor()
-        painter.setPen(fg)
-        painter.setBrush(fg)
-        foregroundPoly = QPolygon(points)
-        painter.drawPolygon(foregroundPoly)
 
     def drawPointObjects(self, painter, points):
         painter.setPen(Qt.black)
         r = 10
         d = 2*r
-        si = self.tileModel.getSelectedIndex()
+        si = self.model.getSelectedIndex()
         for i in range(len(points)):
             point = points[i]
             if i != si:
@@ -312,34 +278,34 @@ class TilePreviewWidget(QWidget):
             painter.drawEllipse(selectedPoint.x()-r, selectedPoint.y()-r, d, d)
 
     def mousePressEvent(self, QMouseEvent):
-        if self.isPreview:
+        if self.preview:
             QMouseEvent.ignore()
         else:
             mp = self.mousePosScale(QMouseEvent.pos())
             # check if selected one is clicked first
-            if self.tileModel.getSelectedIndex() != -1:
+            if self.model.getSelectedIndex() != -1:
                 if self.distanceHelper(
-                        mp, self.tileModel.getSelectedPoint()) <= 100:
+                        mp, self.model.getSelectedPoint()) <= 100:
                     self.binkedPoint = True
                 else:
-                    points = self.tileModel.getPoints()
+                    points = self.model.getPoints()
                     for i in range(len(points)):
                         point = points[i]
                         if self.distanceHelper(mp, point) <= 100:
                             self.binkedPoint = True
-                            self.tileModel.setSelectedIndex(i)
+                            self.model.setSelectedIndex(i)
                             break
 
     def mouseMoveEvent(self, QMouseEvent):
-        if self.isPreview:
+        if self.preview:
             QMouseEvent.ignore()
         else:
             if self.binkedPoint:
                 mp = self.mousePosScale(QMouseEvent.pos())
-                self.tileModel.setSelectedPoint(mp[0], mp[1])
+                self.model.setSelectedPoint(mp[0], mp[1])
 
     def mouseReleaseEvent(self, QMouseEvent):
-        if self.isPreview:
+        if self.preview:
             QMouseEvent.ignore()
         else:
             self.binkedPoint = False
@@ -360,8 +326,8 @@ class TilePreviewWidget(QWidget):
 
 def main():
     app = QApplication([])
-
-    mainWidget = TileEditor()
+    model = TileModel("tileName", [(50, 50)])
+    mainWidget = TileEditor(model)
     mainWidget.show()
     app.exec_()
 

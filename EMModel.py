@@ -263,6 +263,52 @@ class GroupModel(EMModel):
                     None, model.getUid())
         return mcopy
 
+    @classmethod
+    def createModelTransform(cls, model, options):
+        tmGrid = model.getTileGrid()
+        mGrid = []
+        for row in tmGrid:
+            mGrid.append([])
+            for tile in row:
+                mGrid[-1].append((tile[0], tile[1], tile[2], tile[3]))
+                # loop 1: rotate tiles inside
+        for y in range(len(mGrid)):
+            for x in range(len(mGrid[y])):
+                tile = mGrid[y][x]
+                print(tile)
+
+                mGrid[y][x] = [tile[0], (tile[1]+options[1]) % 4,
+                               tile[2] ^ options[2], tile[3] ^ options[3]]
+
+                if mGrid[y][x][2] ^ mGrid[y][x][3]:
+                    mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
+                print("{} + {} -> {}".format(
+                    tile[1], options[1], mGrid[y][x][1]))
+        # loop 2: rotate grid itself
+        if options[1] != 0:
+            tGrid = []
+            numRows = model.getNumRows()
+            numCols = model.getNumCols()
+            if options[1] == 1:
+                for y in range(numCols):
+                    tGrid.append([])
+                    for x in range(numRows-1, -1, -1):
+                        tGrid[-1].append(mGrid[x][y])
+            elif options[1] == 2:
+                for y in range(numRows-1, -1, -1):
+                    tGrid.append([])
+                    for x in range(numCols-1, -1, -1):
+                        tGrid[-1].append(mGrid[y][x])
+            elif options[1] == 3:
+                for y in range(numCols-1, -1, -1):
+                    tGrid.append([])
+                    for x in range(numRows):
+                        tGrid[-1].append(mGrid[x][y])
+
+            mGrid = tGrid
+
+        return cls(model.getName(), mGrid)
+
     def jsonObj(self):
         return {
             "name": self.name,
@@ -270,6 +316,14 @@ class GroupModel(EMModel):
             "ttf": self.tilesToFetch,
             "uid": self.uid,
         }
+
+    def updateModel(self, model):
+        self.name = model.getName()
+        self.grid = model.getTileGrid()
+        self.tilesToFetch = model.getTilesToFetch()
+        self.rows = model.getNumRows()
+        self.cols = model.getNumCols()
+        self.modelUpdated.emit()
 
     def getTileGrid(self):
         return self.tileGrid
@@ -320,3 +374,41 @@ class GroupModel(EMModel):
                 if tile[0] not in ttf:
                     ttf.append(tile[0])
         return ttf
+
+
+class MapModel(EMModel):
+
+    def __init__(self, name="my encounter", gridGM=None,
+                 mapObjects=None, mapNotes=None, uid=-1):
+        super(MapModel, self).__init__(name, "", uid)
+        if gridGM is None:
+            grid = []
+            rows = 5
+            cols = 5
+            for y in range(rows):
+                grid.append([])
+                for x in range(cols):
+                    grid[-1].append((-1, 0, False, False))
+            else:
+                self.gridGM = GroupModel("encounter map", grid)
+
+            self.mapObjects = mapObjects
+            self.mapNotes = mapNotes
+
+    def getGridModel(self):
+        return self.gridGM
+
+    def getTilesToFetch(self):
+        return self.gridGM.getTilesToFetch()
+
+    def getMapObjects(self):
+        return self.mapObjects
+
+    def getMapNotes(self):
+        return self.mapNotes
+
+    def getNumRows(self):
+        return self.gridGM.getNumRows()
+
+    def getNumCols(self):
+        return self.gridGM.getNumCols()
