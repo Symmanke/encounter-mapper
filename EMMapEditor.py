@@ -191,7 +191,8 @@ class MapEditorGraphics(EMModelGraphics):
                                 self.drawErrorTile(painter, x, y)
                             else:
                                 # draw actual tile
-                                self.drawTile(painter, x, y, cachedTM, tile)
+                                self.drawTile(painter, x, y, cachedTM,
+                                              (tile[1], tile[2], tile[3]))
             if self.mouseIndex != (-1, -1) and not self.mousePressed:
                 if self.openTab == 0 and self.selectedObject[0] != -1:
                     self.drawPreviewTileSingle(painter)
@@ -214,14 +215,15 @@ class MapEditorGraphics(EMModelGraphics):
         for y in range(len(tGrid)):
             for x in range(len(tGrid[y])):
                 tile = tGrid[y][x]
-                if tile[0] not in self.modelList:
-                    self.updateModelList(tile[0])
-                # draw single object
-                model = self.modelList[tile[0]]
-                self.drawTile(
-                    painter, groupIndex[0] + x,
-                    groupIndex[1] + y, model,
-                    (tile[1], tile[2], tile[3]), True)
+                if(tile[0] > 0):
+                    if tile[0] not in self.modelList:
+                        self.updateModelList(tile[0])
+                    # draw single object
+                    model = self.modelList[tile[0]]
+                    self.drawTile(
+                        painter, groupIndex[0] + x,
+                        groupIndex[1] + y, model,
+                        (tile[1], tile[2], tile[3]), True)
 
         # def keyPressEvent(self, event):
         #     if self.preview:
@@ -239,11 +241,27 @@ class MapEditorGraphics(EMModelGraphics):
             if QMouseEvent.button() & Qt.LeftButton:
                 self.mousePressed = True
                 if self.mouseIndex != (-1, -1):
-                    self.model.setTileForIndex(
-                        self.mouseIndex[0], self.mouseIndex[1],
-                        self.sOptions)
-                    # perform stuff
-                    self.repaint()
+                    if self.openTab == 0 and self.selectedObject[0] != -1:
+                        tile = (self.selectedObject[0],
+                                self.sOptions[0], self.sOptions[1],
+                                self.sOptions[2])
+                        self.model.setTileForIndex(
+                            self.mouseIndex[0], self.mouseIndex[1], tile)
+                        self.repaint()
+                    elif self.openTab == 1 and self.selectedObject[1] != -1:
+                        print("Adding...")
+                        groupIndex = self.indexAlignedGroup()
+                        gGrid = self.selectedGroup.getTileGrid()
+                        for y in range(self.selectedGroup.getNumRows()):
+                            for x in range(self.selectedGroup.getNumCols()):
+                                tile = gGrid[y][x]
+                                print(tile)
+                                self.model.setTileForIndex(
+                                    groupIndex[0] + x, groupIndex[1] + y,
+                                    tile)
+                        self.repaint()
+
+                        # perform stuff
 
     def mouseMoveEvent(self, QMouseEvent):
         if self.preview:
@@ -255,12 +273,12 @@ class MapEditorGraphics(EMModelGraphics):
             self.mouseIndex = self.calcMouseIndex(QMouseEvent.pos())
             if prevIndex != self.mouseIndex:
                 if (self.mousePressed and self.mouseIndex != (-1, -1)
-                        and self.openTab == 1):
+                        and self.openTab == 0):
+                    tile = [self.selectedObject[0], self.sOptions[0],
+                            self.sOptions[1], self.sOptions[2]]
                     self.model.setTileForIndex(
                         self.mouseIndex[0], self.mouseIndex[1],
-                        self.sOptions)
-                self.repaint()
-            if self.openTab == 2 and self.selectedObject[2] > -1:
+                        tile)
                 self.repaint()
 
     def mouseReleaseEvent(self, QMouseEvent):
