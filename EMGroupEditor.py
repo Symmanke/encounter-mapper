@@ -7,8 +7,7 @@ from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
 from EMModel import GroupModel, TileModel
 from EMTileEditor import TileEditor, TilePreviewWidget
 from EMHelper import ModelManager
-from EMModelPicker import EMModelPicker
-from EMBaseClasses import EMModelEditor, EMModelGraphics
+from EMBaseClasses import EMModelEditor, EMModelGraphics, EMModelPicker
 
 
 class GroupEditor(EMModelEditor):
@@ -106,7 +105,7 @@ class GroupEditor(EMModelEditor):
 
     def updateUI(self):
         # update Buttons
-        options = self.groupPreview.getPOptions()
+        options = self.groupPreview.getSOptions()
         self.hfBtn.setChecked(options[1])
         self.vfBtn.setChecked(options[2])
         self.btnGroup.repaint()
@@ -141,18 +140,19 @@ class GroupPreview(EMModelGraphics):
         return cls(model, tileSize, 50, 50, True)
 
     def setPTile(self, tileId):
-        self.pOptions[0] = tileId
+        print(tileId)
+        self.selectedObject[0] = tileId
         self.updateModelList(tileId)
 
     def transformP(self, type):
         if type == "cw":
-            self.pOptions[1] = (self.pOptions[1] + 1) % 4
+            self.sOptions[0] = (self.sOptions[0] + 1) % 4
         elif type == "ccw":
-            self.pOptions[1] = (self.pOptions[1] + 3) % 4
+            self.sOptions[0] = (self.sOptions[0] + 3) % 4
         elif type == "h":
-            self.pOptions[2] = not self.pOptions[2]
+            self.sOptions[1] = not self.sOptions[1]
         elif type == "v":
-            self.pOptions[3] = not self.pOptions[3]
+            self.sOptions[2] = not self.sOptions[2]
         self.updatePreview.emit()
 
     def removeTileCache(self, id):
@@ -184,14 +184,15 @@ class GroupPreview(EMModelGraphics):
                                 self.drawErrorTile(painter, x, y)
                             else:
                                 # draw actual tile
-                                self.drawTile(painter, x, y, cachedTM, tile)
+                                self.drawTile(painter, x, y, cachedTM,
+                                              (tile[1], tile[2], tile[3]))
             if not self.preview:
                 if self.mouseIndex != (-1, -1) and not self.mousePressed:
-                    if self.pOptions[0] in self.modelList:
-                        model = self.modelList[self.pOptions[0]]
+                    if self.selectedObject[0] in self.modelList:
+                        model = self.modelList[self.selectedObject[0]]
                         self.drawTile(
                             painter, self.mouseIndex[0], self.mouseIndex[1],
-                            model, self.pOptions, True)
+                            model, self.sOptions, True)
 
     def keyPressEvent(self, event):
         if self.preview:
@@ -209,9 +210,11 @@ class GroupPreview(EMModelGraphics):
             if QMouseEvent.button() & Qt.LeftButton:
                 self.mousePressed = True
                 if self.mouseIndex != (-1, -1):
+                    tileOptions = [self.selectedObject[0], self.sOptions[0],
+                                   self.sOptions[1], self.sOptions[2]]
                     self.model.setTileForIndex(
                         self.mouseIndex[0], self.mouseIndex[1],
-                        self.getPOptions())
+                        tileOptions)
                     # perform stuff
                     self.repaint()
 
@@ -224,9 +227,12 @@ class GroupPreview(EMModelGraphics):
             self.mouseIndex = self.calcMouseIndex(QMouseEvent.pos())
             if(prevIndex != self.mouseIndex):
                 if self.mousePressed and self.mouseIndex != (-1, -1):
+                    tileOptions = [self.selectedObject[0], self.sOptions[0],
+                                   self.sOptions[1], self.sOptions[2]]
                     self.model.setTileForIndex(
                         self.mouseIndex[0], self.mouseIndex[1],
-                        self.getPOptions())
+                        tileOptions)
+                    print(tileOptions)
                 self.repaint()
 
     def mouseReleaseEvent(self, QMouseEvent):

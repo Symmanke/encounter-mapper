@@ -265,6 +265,7 @@ class GroupModel(EMModel):
 
     @classmethod
     def createModelTransform(cls, model, options):
+        print("Transform Options: {}".format(options))
         tmGrid = model.getTileGrid()
         mGrid = []
         for row in tmGrid:
@@ -272,40 +273,65 @@ class GroupModel(EMModel):
             for tile in row:
                 mGrid[-1].append((tile[0], tile[1], tile[2], tile[3]))
                 # loop 1: rotate tiles inside
+        print("Before:{}".format(mGrid))
         for y in range(len(mGrid)):
             for x in range(len(mGrid[y])):
                 tile = mGrid[y][x]
-                print(tile)
+                # print(tile)
 
-                mGrid[y][x] = [tile[0], (tile[1]+options[1]) % 4,
-                               tile[2] ^ options[2], tile[3] ^ options[3]]
-
-                if mGrid[y][x][2] ^ mGrid[y][x][3]:
+                mGrid[y][x] = [tile[0], (tile[1]+options[0]) % 4,
+                               tile[2] ^ options[1], tile[3] ^ options[2]]
+                if(tile[2] ^ tile[3]) and mGrid[y][x][1] % 2:
                     mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
-                print("{} + {} -> {}".format(
-                    tile[1], options[1], mGrid[y][x][1]))
-        # loop 2: rotate grid itself
-        if options[1] != 0:
-            tGrid = []
-            numRows = model.getNumRows()
-            numCols = model.getNumCols()
-            if options[1] == 1:
-                for y in range(numCols):
-                    tGrid.append([])
-                    for x in range(numRows-1, -1, -1):
-                        tGrid[-1].append(mGrid[x][y])
-            elif options[1] == 2:
-                for y in range(numRows-1, -1, -1):
-                    tGrid.append([])
-                    for x in range(numCols-1, -1, -1):
-                        tGrid[-1].append(mGrid[y][x])
-            elif options[1] == 3:
-                for y in range(numCols-1, -1, -1):
-                    tGrid.append([])
-                    for x in range(numRows):
-                        tGrid[-1].append(mGrid[x][y])
+                    # print(mGrid[y][x])
 
-            mGrid = tGrid
+                    # if mGrid[y][x][2] ^ mGrid[y][x][3] and mGrid[y][x][1] % 2:
+                    #     mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
+        print("after:{}".format(mGrid))
+        # loop 2: rotate grid itself
+        tGrid = []
+        numRows = model.getNumRows()
+        numCols = model.getNumCols()
+        if options[0] == 0:
+            if options[1] or options[2]:
+                for y in range(numRows):
+                    tGrid.append([])
+                    for x in range(numCols):
+                        y2 = (numRows-1) - y if options[2] else y
+                        x2 = (numCols-1) - x if options[1] else x
+                        print("1:({},{}) 2:({},{})".format(x, y, x2, y2))
+                        print(len(tGrid))
+
+                        tGrid[-1].append(mGrid[y2][x2])
+            else:
+                tGrid = mGrid
+
+        elif options[0] == 1:
+            for y in range(numCols):
+                tGrid.append([])
+                for x in range(numRows-1, -1, -1):
+                    y2 = (numCols-1) - y if options[2] else y
+                    x2 = (numRows-1) - x if options[1] else x
+
+                    tGrid[-1].append(mGrid[x2][y2])
+        elif options[0] == 2:
+            for y in range(numRows-1, -1, -1):
+                tGrid.append([])
+                for x in range(numCols-1, -1, -1):
+                    y2 = (numRows-1) - y if options[2] else y
+                    x2 = (numCols-1) - x if options[1] else x
+
+                    tGrid[-1].append(mGrid[y2][x2])
+        elif options[0] == 3:
+            for y in range(numCols-1, -1, -1):
+                tGrid.append([])
+                for x in range(numRows):
+                    y2 = (numCols-1) - y if options[2] else y
+                    x2 = (numRows-1) - x if options[1] else x
+
+                    tGrid[-1].append(mGrid[x2][y2])
+
+        mGrid = tGrid
 
         return cls(model.getName(), mGrid)
 
@@ -376,39 +402,25 @@ class GroupModel(EMModel):
         return ttf
 
 
-class MapModel(EMModel):
+class MapModel(GroupModel):
 
-    def __init__(self, name="my encounter", gridGM=None,
-                 mapObjects=None, mapNotes=None, uid=-1):
-        super(MapModel, self).__init__(name, "", uid)
-        if gridGM is None:
-            grid = []
+    def __init__(self, name="my encounter", tileGrid=None,
+                 ttf=None, mapObjects=None, mapNotes=None, uid=-1):
+        grid = [] if tileGrid is None else tileGrid
+        if len(grid) == 0:
             rows = 5
             cols = 5
             for y in range(rows):
                 grid.append([])
                 for x in range(cols):
                     grid[-1].append((-1, 0, False, False))
-            else:
-                self.gridGM = GroupModel("encounter map", grid)
 
-            self.mapObjects = mapObjects
-            self.mapNotes = mapNotes
-
-    def getGridModel(self):
-        return self.gridGM
-
-    def getTilesToFetch(self):
-        return self.gridGM.getTilesToFetch()
+        super(MapModel, self).__init__(name, grid, ttf, uid)
+        self.mapObjects = [] if mapObjects is None else mapObjects
+        self.mapNotes = [] if mapNotes is None else mapNotes
 
     def getMapObjects(self):
         return self.mapObjects
 
     def getMapNotes(self):
         return self.mapNotes
-
-    def getNumRows(self):
-        return self.gridGM.getNumRows()
-
-    def getNumCols(self):
-        return self.gridGM.getNumCols()
