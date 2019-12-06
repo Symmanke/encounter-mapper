@@ -15,6 +15,9 @@ class ModelManager():
     NextUid = "NextUid"
     ClassRef = "ClassRef"
 
+    ConfigExt = ".json"
+    MapExt = ".emmap"
+
     loadedModels = {}
 
     paletteModels = None
@@ -37,11 +40,11 @@ class ModelManager():
         ModelManager.loadPalette()
 
     @classmethod
-    def loadModelFromFile(cls, name, classType):
+    def loadModelListFromFile(cls, name, classType, ext=".json"):
         if name not in cls.loadedModels:
             # fetch data according to filename
             modelList = []
-            f = open(name+".json", "r")
+            f = open(name+ext, "r")
             if f.mode == "r":
                 contents = f.read()
                 jsContents = json.loads(contents)
@@ -62,13 +65,31 @@ class ModelManager():
                 cls.createCache(name)
 
     @classmethod
-    def saveModelToFile(cls, name):
+    def loadModelFromFile(cls, path, classType):
+        f = open(path, "r")
+        if f.mode == "r":
+            contents = f.read()
+            jsContents = json.loads(contents)
+            f.close()
+
+            return classType.createModelJS(jsContents)
+        return None
+
+    @classmethod
+    def saveModelToFile(cls, name, ext=".json"):
         modelJS = []
         for model in cls.loadedModels[name][cls.List]:
             modelJS.append(model.jsonObj())
 
         text = json.dumps(modelJS)
-        f = open(name+".json", "w+")
+        f = open(name+ext, "w+")
+        f.write(text)
+        f.close()
+
+    @classmethod
+    def saveJSONToFile(cls, jsObj,  path, ext=""):
+        text = json.dumps(jsObj)
+        f = open(path+ext, "w+")
         f.write(text)
         f.close()
 

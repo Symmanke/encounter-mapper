@@ -133,7 +133,7 @@ class EMModelPicker(QWidget):
             self.modelList.setItemWidget(listItem, listItemWidget)
 
     def loadModels(self):
-        ModelManager.loadModelFromFile(self.modelName, self.modelClass)
+        ModelManager.loadModelListFromFile(self.modelName, self.modelClass)
         self.models = ModelManager.fetchModels(self.modelName)
         self.updateUI()
 

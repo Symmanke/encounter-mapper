@@ -283,10 +283,7 @@ class GroupModel(EMModel):
                                tile[2] ^ options[1], tile[3] ^ options[2]]
                 if(tile[2] ^ tile[3]) and mGrid[y][x][1] % 2:
                     mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
-                    # print(mGrid[y][x])
 
-                    # if mGrid[y][x][2] ^ mGrid[y][x][3] and mGrid[y][x][1] % 2:
-                    #     mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
         print("after:{}".format(mGrid))
         # loop 2: rotate grid itself
         tGrid = []
@@ -419,8 +416,23 @@ class MapModel(GroupModel):
         self.mapObjects = [] if mapObjects is None else mapObjects
         self.mapNotes = [] if mapNotes is None else mapNotes
 
+    @classmethod
+    def createModelJS(cls, jsonObj):
+        return cls(jsonObj["name"], jsonObj["grid"], jsonObj["ttf"],
+                   jsonObj["objects"], jsonObj["notes"], jsonObj["uid"])
+
     def getMapObjects(self):
         return self.mapObjects
 
     def getMapNotes(self):
         return self.mapNotes
+
+    def jsonObj(self):
+        return [{
+            "name": self.name,
+            "grid": self.tileGrid,
+            "ttf": self.tilesToFetch,
+            "uid": self.uid,
+            "objects": self.mapObjects,
+            "notes": self.mapNotes
+        }]

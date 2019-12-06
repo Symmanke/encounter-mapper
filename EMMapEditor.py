@@ -12,12 +12,13 @@ from EMBaseClasses import EMModelGraphics, EMModelPicker
 
 class MapEditor(QWidget):
 
-    def __init__(self):
+    def __init__(self, model=None):
         # Set ui in here
         super(MapEditor, self).__init__()
         layout = QGridLayout()
         # Create a tab widget
-        self.model = MapModel()
+        self.model = MapModel() if model is None else model
+        self.filePathOfModel = None
         self.mapEditGraphics = MapEditorGraphics(self.model)
         self.mapEditGraphics.updatePreview.connect(self.updateUI)
         self.tabWidget = QTabWidget()
@@ -73,6 +74,21 @@ class MapEditor(QWidget):
         layout.addWidget(self.btnGroup, 1, 0)
         self.setLayout(layout)
 
+    def getModel(self):
+        return self.model
+
+    def setModel(self, model):
+        self.model = model
+        self.mapEditGraphics.setModel(model)
+        self.model.modelUpdated.connect(self.updateUI)
+        self.updateUI()
+
+    def getFilePath(self):
+        return self.filePathOfModel
+
+    def setFilePath(self, path):
+        self.filePathOfModel = path
+
     def rotateTileMapCW(self):
         self.mapEditGraphics.transformS("cw")
 
@@ -121,6 +137,12 @@ class MapEditorGraphics(EMModelGraphics):
         # Need for later, when I introduce objects (unless I decide to make)
         # everything grid based instead for simplicity's sake
         self.mousePosition = (-1, -1)
+
+    def setModel(self, model):
+        self.model = model
+        self.rows = model.getNumRows()
+        self.cols = model.getNumCols()
+        self.repaint()
 
     def updateSelectedTab(self, index):
         self.openTab = index

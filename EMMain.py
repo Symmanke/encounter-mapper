@@ -1,85 +1,99 @@
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
-                             QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-                             QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
-                             QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-                             QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (QApplication, QStackedWidget, QFileDialog,
+                             QLabel, QPushButton, QVBoxLayout,
+                             QWidget, QMainWindow, QAction)
 
 # from EMMapWidget import EMMapWidget
-from EMNotesTab import EMNotesTab
-from EMModelPicker import EMModelPicker
-from EMTileEditor import TileEditor, TilePreviewWidget
-from EMModel import TileModel, GroupModel
+from EMMapEditor import MapEditor
+from EMModel import MapModel
 from EMHelper import ModelManager
-from EMGroupEditor import GroupEditor, GroupPreview
 
 
-class EMMain(object):
+class EMMain(QMainWindow):
     """docstring for EMMain."""
 
-    def __init__(self, arg):
-        # Set ui in here
+    def __init__(self, map=None):
         super(EMMain, self).__init__()
-        self.arg = arg
+        if map is None:
+            self.model = MapModel()
+        self.mapEditor = MapEditor(self.model)
+        self.setWindowTitle("Encounter Mapper")
+        # Set Menu Elements
+        menuBar = self.menuBar()
 
+        newAction = QAction("New", self)
+        openAction = QAction("Open", self)
+        saveAction = QAction("Save", self)
+        saveAction.triggered.connect(self.saveEncounter)
+        saveAsAction = QAction("Save As", self)
+        saveAsAction.triggered.connect(self.saveAsEncounter)
+        quitAction = QAction("Quit", self)
 
-def setTilesLayout():
-    tilesTab = QWidget()
-    return tilesTab
+        undoAction = QAction("Undo", self)
+        redoAction = QAction("Redo", self)
 
+        self.statusBar()
 
-# def setNotesLayout():
-#     notesTab = QWidget()
-#     notesGridLayout = QGridLayout()
-#     notesGridLayout.addWidget(QPushButton("New Note"), 0, 0)
-#     notesCombo = QComboBox()
-#     notesCombo.addItems(["Note 1", "Note 2", "Note 3"])
-#     notesGridLayout.addWidget(notesCombo, 0, 1)
-#
-#     titleWidget = QWidget()
-#     titleLayout = QHBoxLayout()
-#     titleLayout.addWidget(QLabel("Title:"))
-#     titleLayout.addWidget(QLineEdit())
-#     titleWidget.setLayout(titleLayout)
-#     notesGridLayout.addWidget(titleWidget, 1, 0, 1, 2)
-#     notesGridLayout.addWidget(QLabel("Notes:"), 2, 0, 1, 2)
-#     notesGridLayout.addWidget(QTextEdit(), 3, 0, 2, 2)
-#
-#     notesGridLayout.addWidget(QPushButton("Delete"), 5, 1)
-#
-#     notesTab.setLayout(notesGridLayout)
-#     return notesTab
+        fileMenu = menuBar.addMenu("File")
+        fileMenu.addAction(newAction)
+        fileMenu.addAction(openAction)
+        fileMenu.addAction(saveAction)
+
+        fileMenu.addAction(saveAsAction)
+        fileMenu.addAction(quitAction)
+
+        editMenu = menuBar.addMenu("Edit")
+        editMenu.addAction(undoAction)
+        editMenu.addAction(redoAction)
+
+        menuBar.setNativeMenuBar(False)
+        self.editStack = QStackedWidget()
+        self.editStack.addWidget(self.initialWidget())
+        self.editStack.addWidget(self.mapEditor)
+
+        self.setCentralWidget(self.editStack)
+
+    def initialWidget(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+        new = QPushButton("New Encounter")
+        new.clicked.connect(self.newEncounter)
+        open = QPushButton("Open Encounter")
+        open.clicked.connect(self.openEncounter)
+
+        layout.addWidget(QLabel("Welcome To Encounter Mapper"))
+        layout.addWidget(new)
+        layout.addWidget(open)
+        widget.setLayout(layout)
+
+        return widget
+
+    def newEncounter(self):
+        self.editStack.setCurrentIndex(1)
+        self.setWindowTitle("untitled*")
+
+    def openEncounter(self):
+        pathToOpen = QFileDialog.getOpenFileName()
+        if pathToOpen is not None:
+            self.model = ModelManager.loadModelFromFile(pathToOpen[0],
+                                                        MapModel)
+            if self.model is not None:
+
+                self.mapEditor.setModel(self.model)
+                self.editStack.setCurrentIndex(1)
+
+    def saveAsEncounter(self):
+        filePath = QFileDialog.getSaveFileName()
+        if filePath is not None:
+            self.mapEditor.setFilePath(filePath)
+            model = self.mapEditor.getModel()
+            modelJS = model.jsonObj()
+            ModelManager.saveJSONToFile(modelJS, filePath[0])
+
+    def saveEncounter(self):
+        pass
 
 
 app = QApplication([])
-
-mainWidget = QWidget()
-
-mainLayout = QHBoxLayout()
-
-# Create a tab widget
-tabWidget = QTabWidget()
-tab1 = QWidget()
-# Set a box layout
-
-tab2 = QWidget()
-
-
-tabWidget.addTab(EMModelPicker(ModelManager.TileName, TileModel,
-                               TileEditor, TilePreviewWidget), "Tiles")
-tabWidget.addTab(EMModelPicker(ModelManager.GroupName, GroupModel,
-                               GroupEditor, GroupPreview), "Groups")
-tabWidget.addTab(setTilesLayout(), "Objects")
-tabWidget.addTab(EMNotesTab(), "Notes")
-
-# mainLayout.addWidget(QLabel("TBD"))
-mainLayout.addWidget(QWidget())
-mainLayout.addWidget(tabWidget)
-
-mainWidget.setLayout(mainLayout)
-
-mainWidget.show()
-
-
-# label = QLabel('Hello World!')
-# label.show()
+mainWindow = EMMain()
+mainWindow.show()
 app.exec_()
