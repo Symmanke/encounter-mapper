@@ -8,6 +8,7 @@ from EMModel import TileModel, GroupModel, MapModel
 from EMHelper import ModelManager
 from EMGroupEditor import GroupEditor, GroupPreview
 from EMBaseClasses import EMModelGraphics, EMModelPicker
+from EMNotesTab import NotesTab
 
 
 class MapEditor(QWidget):
@@ -36,7 +37,7 @@ class MapEditor(QWidget):
         self.tabWidget.addTab(self.tilePicker, "Tiles")
         self.tabWidget.addTab(self.groupPicker, "Groups")
         self.tabWidget.addTab(QWidget(), "Objects")
-        self.tabWidget.addTab(QWidget(), "Notes")
+        self.tabWidget.addTab(NotesTab(), "Notes")
 
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
