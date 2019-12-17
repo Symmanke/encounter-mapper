@@ -4,6 +4,21 @@ import json
 
 
 class ModelManager():
+    """
+    ModelManager is responsible for the loading, caching, and maintaining of
+    all Models internal to the Application.
+
+    When a model type is first needed, it should be loaded through
+    loadModelListFromFile(). Models should be fetched by type, and can be
+    done so through fetchByUid(). Future implementations will allow for basic
+    search functionality via model name and tags.
+
+    Calling saveModelToFile() will save the mentioned list of models. This
+    should be done whenever a model is updated. For models that are not meant
+    to be internal resources (ex. maps) they should be saved instead via
+    saveJSONToFile() and loaded through loadModelFromFile()
+    """
+
     TileName = "Tile"
     GroupName = "Group"
     PaletteName = "Palette"
@@ -33,11 +48,6 @@ class ModelManager():
     groupModelsByTag = {}
     groupModelsByName = {}
     groupModelNextUID = 0
-
-    def __init__(self):
-        ModelManager.loadPalette()
-        ModelManager.loadTiles()
-        ModelManager.loadPalette()
 
     @classmethod
     def loadModelListFromFile(cls, name, classType, ext=".json"):

@@ -10,6 +10,35 @@ from EMHelper import ModelManager
 
 
 class EMModelPicker(QWidget):
+    """
+    A class used to organize and select objects instantiated from models
+
+    For a majority of the models used to populate the map, I need some way
+    of selecting, creating, editing the models, etc. The model picker is
+    a base class that can fetch said models from memory, populate a list
+    with depictions of the models, and allow for the creation/selection
+    of new models. Use of the EMModelPicker requires a modelClass, which
+    is the data being organized, a modelPreviewClass, which generates a
+    graphical representation of the model, and an editorClass, which is opened
+    whenever editing/creating a new instance of the model
+
+    Signals
+    -------
+
+    selectedModel -> int
+        emitted whenever a new model has been selected. emits the uid value
+        of the model
+    updatedModel -> int
+        Emits whenever an existing model has been updated. Should be used in
+        conjunction with modelPreviewClasses to update the graphics. Emits uid
+    deletedModel -> int
+        Emitted whenever a model is deleted from the list. Should be used to
+        update graphical representations of grids using said model.
+
+
+
+
+    """
 
     selectedModel = pyqtSignal(int)
     updatedModel = pyqtSignal(int)
@@ -142,6 +171,10 @@ class EMModelPicker(QWidget):
 
 
 class ModelPickerListItem(QWidget):
+    """
+    List item used in conjunction with EMModelPicker. Takes a model, and the
+    associated preview class used in depicting the model
+    """
 
     def __init__(self, previewClass, model=None):
         super(ModelPickerListItem, self).__init__()
@@ -155,6 +188,29 @@ class ModelPickerListItem(QWidget):
 
 
 class EMModelEditor(QWidget):
+    """
+    Editor used to create and update existing models. Typically created through
+    EMModelPicker.
+
+    Methods of editing and depictions of models will vary based off the model's
+    function and use. This provides two buttons, the apply and cancel button.
+    EMModelEditor also has two signals, applyModel and cancelModel.
+    When instanciatng a ModelEditor, both signals should be applied, and used
+    to determine when a model is finished editing. To prevent unnecessary
+    changes, it is suggested to pass a clone of an existing model to the
+    model editor, rather than a reference when trying to edit models.
+
+    Signals
+    _______
+
+    applyModel -> None
+        Emitted when the apply button is pressed, signifying the changes to
+        the model are complete and ready to be saved. When hooked into
+        EMModelPicker, will close the Editor
+    cancelModel -> None
+        Emitted when the cancel button is pressed, signifying the edit is to
+        be cancelled.
+    """
     applyModel = pyqtSignal()
     cancelModel = pyqtSignal()
 
@@ -188,6 +244,19 @@ class EMModelEditor(QWidget):
 
 
 class EMModelGraphics(QWidget):
+    """
+    Graphical representation of the model, used when editing the model, or
+    as a preview depicting the model
+
+    The EMModelGraphics is a graphical representation of a model, specifically
+    used for the tile-based models. As such, it contains multiple helper
+    methods for drawing tiles and updating a cache of existing tiles. Future
+    changes may make the tile functionality as a subclass, when non-tile-based
+    models are added.
+
+    The preview property determines when the graphics can be interacted with,
+    and should only be True when used in conjunction with an editor.
+    """
 
     updatePreview = pyqtSignal()
 

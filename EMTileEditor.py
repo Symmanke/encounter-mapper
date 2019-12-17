@@ -10,6 +10,11 @@ from EMBaseClasses import EMModelEditor, EMModelGraphics
 
 
 class TileEditor(EMModelEditor):
+    """
+    The TileEditor is a class used to edit TileModels
+
+    It inherits EMModelEditor, and is often called through EMModelPicker.
+    """
     selectingColor = ""
     paletteDialog = None
     paletteEditor = None
@@ -218,14 +223,6 @@ class TileEditor(EMModelEditor):
         self.vfBtn.setEnabled(num > 0)
 
         self.buttonHolder.repaint()
-
-    def addTile(self):
-        """Todo"""
-        self.addModel.emit()
-
-    def cancelTile(self):
-        """Todo"""
-        self.cancelModel.emit()
 
 
 class TilePreviewWidget(EMModelGraphics):
