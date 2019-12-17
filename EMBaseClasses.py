@@ -100,7 +100,7 @@ class EMModelPicker(QWidget):
             tempCopy = self.modelClass.createModelCopy(self.models[sr])
 
             self.modelEditor = self.editorClass(tempCopy)
-            self.modelEditor.addModel.connect(self.updateExistingModel)
+            self.modelEditor.applyModel.connect(self.updateExistingModel)
             self.modelEditor.cancelModel.connect(self.cancelModel)
 
             layout.addWidget(self.modelEditor)
