@@ -378,9 +378,11 @@ class EMModelGraphics(QWidget):
             return (-1, -1)
         return index
 
-    def mousePosScale(self, mPoint):
-        mp = (int((mPoint.x()-10)/5), int((mPoint.y()-10)/5))
-        mp = (max(min(mp[0], 100), 0), max(min(mp[1], 100), 0))
+    def mousePosScale(self, mPoint, xOff=10, yOff=10, scale=500):
+        calcScale = self.tileSize/100
+        mp = (int((mPoint.x()-xOff)/calcScale), int((mPoint.y()-10)/calcScale))
+        ms = [self.numCols*100, self.numRows*100]
+        mp = (max(min(mp[0], ms[0]), 0), max(min(mp[1], ms[1]), 0))
         return mp
 
     def distanceHelper(self, point1, point2):

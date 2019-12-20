@@ -19,6 +19,7 @@ class MapEditor(QWidget):
         layout = QGridLayout()
         # Create a tab widget
         self.model = MapModel() if model is None else model
+        self.pressedItem = None
         self.filePathOfModel = None
         self.mapEditGraphics = MapEditorGraphics(self.model)
         self.mapEditGraphics.updatePreview.connect(self.updateUI)
@@ -126,7 +127,12 @@ class MapEditor(QWidget):
     def getNotes(self):
         return self.model.getMapNotes()
 
-    def addNote(self, note, index=-1):
+    def addNote(self, note, index=-1, x=-1, y=-1):
+        # Since this is a new note, begin in the center
+        if x == -1 and y == -1:
+            x = (self.model.getNumCols()*100)/2
+            y = (self.model.getNumRows()*100)/2
+        note.setPos(x, y)
         self.model.addMapNote(note, index)
         self.notesWidget.populateList(self.model.getMapNotes())
 
@@ -169,6 +175,7 @@ class MapEditorGraphics(EMModelGraphics):
         # Need for later, when I introduce objects (unless I decide to make)
         # everything grid based instead for simplicity's sake
         self.mousePosition = (-1, -1)
+        self.pressedItem = None
 
     def setModel(self, model):
         self.model = model
@@ -252,6 +259,12 @@ class MapEditorGraphics(EMModelGraphics):
                     self.drawPreviewTileSingle(painter)
                 elif self.openTab == 1 and self.selectedObject[1] != -1:
                     self.drawPreviewTileGroup(painter)
+            # Draw the notes
+            index = 1
+            for note in self.model.getMapNotes():
+                np = note.getPos()
+                note.drawNoteIcon(painter, np[0]-12, np[1]-12, 25, index)
+                index += 1
 
     def drawPreviewTileSingle(self, painter):
         if self.selectedObject[0] not in self.modelList:
@@ -314,32 +327,52 @@ class MapEditorGraphics(EMModelGraphics):
                                     groupIndex[0] + x, groupIndex[1] + y,
                                     tile)
                         self.repaint()
+                    elif self.openTab == 3:
+                        print("Checking the Notes Tab")
+                        mp = self.mousePosition
+                        for note in self.model.getMapNotes():
+                            print("{}, {} -> {}".format(
+                                mp, note.getPos(), self.distanceHelper(
+                                    mp, note.getPos())))
+                            if self.distanceHelper(mp, note.getPos()) <= 1000:
+                                print("Bingo!")
+                                self.pressedItem = (3, note)
+                                break
 
-                        # perform stuff
+                                # perform stuff
 
     def mouseMoveEvent(self, QMouseEvent):
         if self.preview:
             QMouseEvent.ignore()
         else:
             self.setFocus()
-            self.mousePosition = self.mousePosScale(QMouseEvent.pos())
+            self.mousePosition = self.mousePosScale(
+                QMouseEvent.pos(), 0, 0, 200)
             prevIndex = self.mouseIndex
             self.mouseIndex = self.calcMouseIndex(QMouseEvent.pos())
-            if prevIndex != self.mouseIndex:
-                if (self.mousePressed and self.mouseIndex != (-1, -1)
-                        and self.openTab == 0):
-                    tile = [self.selectedObject[0], self.sOptions[0],
-                            self.sOptions[1], self.sOptions[2]]
-                    self.model.setTileForIndex(
-                        self.mouseIndex[0], self.mouseIndex[1],
-                        tile)
-                self.repaint()
+            if self.openTab == 0 or self.openTab == 1:
+                if prevIndex != self.mouseIndex:
+                    if (self.mousePressed and self.mouseIndex != (-1, -1)
+                            and self.openTab == 0):
+                        tile = [self.selectedObject[0], self.sOptions[0],
+                                self.sOptions[1], self.sOptions[2]]
+                        self.model.setTileForIndex(
+                            self.mouseIndex[0], self.mouseIndex[1],
+                            tile)
+                    self.repaint()
+            else:
+                if self.mousePressed and self.pressedItem is not None:
+                    if self.pressedItem[0] == 3:
+                        self.pressedItem[1].setPos(
+                            self.mousePosition[0], self.mousePosition[1])
+                    self.repaint()
 
     def mouseReleaseEvent(self, QMouseEvent):
         if self.preview:
             QMouseEvent.ignore()
         else:
             self.mousePressed = False
+            self.pressedItem = None
 
 
 def printRot(rot, grid, numRows, numCols):

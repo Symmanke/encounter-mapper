@@ -230,7 +230,7 @@ class NoteData(QObject):
     def getDesc(self):
         return self.desc
 
-    def getCoordinates(self):
+    def getPos(self):
         return (self.xPos, self.yPos)
 
     def setType(self, type):
