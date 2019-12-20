@@ -86,8 +86,8 @@ class EMModelPicker(QWidget):
         self.modelDialog = QDialog()
         layout = QVBoxLayout()
         self.modelEditor = self.editorClass(self.modelClass())
-        self.modelEditor.applyModel.connect(self.addNewModel)
-        self.modelEditor.cancelModel.connect(self.cancelModel)
+        self.modelEditor.applyEdit.connect(self.addNewModel)
+        self.modelEditor.cancelEdit.connect(self.cancelEdit)
         layout.addWidget(self.modelEditor)
         self.modelDialog.setLayout(layout)
         self.modelDialog.exec_()
@@ -100,8 +100,8 @@ class EMModelPicker(QWidget):
             tempCopy = self.modelClass.createModelCopy(self.models[sr])
 
             self.modelEditor = self.editorClass(tempCopy)
-            self.modelEditor.applyModel.connect(self.updateExistingModel)
-            self.modelEditor.cancelModel.connect(self.cancelModel)
+            self.modelEditor.applyEdit.connect(self.updateExistingModel)
+            self.modelEditor.cancelEdit.connect(self.cancelEdit)
 
             layout.addWidget(self.modelEditor)
             self.modelDialog.setLayout(layout)
@@ -126,7 +126,7 @@ class EMModelPicker(QWidget):
         self.updateUI()
         self.updatedModel.emit(model.getUid())
 
-    def cancelModel(self):
+    def cancelEdit(self):
         self.modelDialog.close()
         self.modelDialog = None
         self.modelEditor = None
@@ -187,14 +187,27 @@ class ModelPickerListItem(QWidget):
             self.setLayout(layout)
 
 
-class EMModelEditor(QWidget):
+class EMEditor(QWidget):
+    applyEdit = pyqtSignal()
+    cancelEdit = pyqtSignal()
+
+    def __init__(self):
+        super(EMEditor, self).__init__()
+
+        self.applyBtn = QPushButton("Apply")
+        self.applyBtn.clicked.connect(self.applyEdit.emit)
+        self.cancelBtn = QPushButton("Cancel")
+        self.cancelBtn.clicked.connect(self.cancelEdit.emit)
+
+
+class EMModelEditor(EMEditor):
     """
     Editor used to create and update existing models. Typically created through
     EMModelPicker.
 
     Methods of editing and depictions of models will vary based off the model's
     function and use. This provides two buttons, the apply and cancel button.
-    EMModelEditor also has two signals, applyModel and cancelModel.
+    EMModelEditor also has two signals, applyEdit and cancelEdit.
     When instanciatng a ModelEditor, both signals should be applied, and used
     to determine when a model is finished editing. To prevent unnecessary
     changes, it is suggested to pass a clone of an existing model to the
@@ -203,26 +216,20 @@ class EMModelEditor(QWidget):
     Signals
     _______
 
-    applyModel -> None
+    applyEdit -> None
         Emitted when the apply button is pressed, signifying the changes to
         the model are complete and ready to be saved. When hooked into
         EMModelPicker, will close the Editor
-    cancelModel -> None
+    cancelEdit -> None
         Emitted when the cancel button is pressed, signifying the edit is to
         be cancelled.
     """
-    applyModel = pyqtSignal()
-    cancelModel = pyqtSignal()
 
     def __init__(self, model=None):
         super(EMModelEditor, self).__init__()
         self.model = model
         if self.model is not None:
             self.model.modelUpdated.connect(self.updateUI)
-        self.applyBtn = QPushButton("Apply")
-        self.applyBtn.clicked.connect(self.applyModel.emit)
-        self.cancelBtn = QPushButton("Cancel")
-        self.cancelBtn.clicked.connect(self.cancelModel.emit)
         self.modelNameEdit = QLineEdit()
         self.modelNameEdit.textChanged.connect(self.updateModelName)
         self.modelTagsEdit = QLineEdit()

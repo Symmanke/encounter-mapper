@@ -34,10 +34,13 @@ class MapEditor(QWidget):
         self.groupPicker.selectedModel.connect(
             self.mapEditGraphics.updateSelectedObject)
 
+        self.notesWidget = NotesTab()
+        self.notesWidget.setCurrentEditor(self)
+
         self.tabWidget.addTab(self.tilePicker, "Tiles")
         self.tabWidget.addTab(self.groupPicker, "Groups")
         self.tabWidget.addTab(QWidget(), "Objects")
-        self.tabWidget.addTab(NotesTab(), "Notes")
+        self.tabWidget.addTab(self.notesWidget, "Notes")
 
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
@@ -113,6 +116,34 @@ class MapEditor(QWidget):
 
     def delGroupCol(self):
         self.model.delCol()
+
+    """
+    *------------*
+    |Note Methods|
+    *------------*
+    """
+
+    def getNotes(self):
+        return self.model.getMapNotes()
+
+    def addNote(self, note, index=-1):
+        self.model.addMapNote(note, index)
+        self.notesWidget.populateList(self.model.getMapNotes())
+
+    def updateNote(self, note, index):
+        self.model.updateMapNote(note, index)
+        self.notesWidget.populateList(self.model.getMapNotes())
+
+    def updateNotePosition(self, index, x, y):
+        note = self.model.getMapNotes()[index]
+        note.setPos(x, y)
+        self.updateMapNote(note, index)
+
+    """
+    *----------*
+    |UI Methods|
+    *----------*
+    """
 
     def updateUI(self):
         # update Buttons

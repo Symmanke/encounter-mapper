@@ -427,6 +427,16 @@ class MapModel(GroupModel):
     def getMapNotes(self):
         return self.mapNotes
 
+    def addMapNote(self, note, index=-1):
+        index = len(self.mapNotes) if index == -1 else index
+        self.mapNotes.insert(index, note)
+        self.modelUpdated.emit()
+
+    def updateMapNote(self, note, index):
+        if index > 0 and index < len(self.mapNotes):
+            self.mapNotes[index] = note
+        self.modelUpdated.emit()
+
     def jsonObj(self):
         return [{
             "name": self.name,
