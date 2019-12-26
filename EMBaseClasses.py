@@ -266,6 +266,8 @@ class EMModelGraphics(QWidget):
     """
 
     updatePreview = pyqtSignal()
+    selectedItem = pyqtSignal(int, int)
+    selectedGroup = pyqtSignal(int, int, int, int, int)
 
     def __init__(self, model=None, rows=1, cols=1,
                  tileSize=100, width=500, height=500,

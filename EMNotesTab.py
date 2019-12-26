@@ -36,7 +36,7 @@ class NotesTab(QWidget):
         self.noteDesc.setReadOnly(True)
 
         self.noteList = QListWidget()
-        self.noteList.itemClicked.connect(self.updateNoteSelected)
+        self.noteList.currentItemChanged.connect(self.updateNoteSelected)
         self.populateList(notes)
 
         self.newBtn = QPushButton("New")
@@ -77,6 +77,9 @@ class NotesTab(QWidget):
         for i in range(len(notes)):
             note = notes[i]
             self.noteList.addItem("{}: {}".format(i+1, note.getTitle()))
+
+    def setSelectedNote(self, index):
+        self.noteList.setCurrentRow(index)
 
     def updateNoteSelected(self, index):
         cr = self.noteList.currentRow()

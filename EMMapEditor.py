@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QApplication,
+from PyQt5.QtWidgets import (QApplication, QLabel,
                              QGridLayout, QTabWidget, QWidget, QPushButton)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPainter
@@ -23,6 +23,7 @@ class MapEditor(QWidget):
         self.filePathOfModel = None
         self.mapEditGraphics = MapEditorGraphics(self.model)
         self.mapEditGraphics.updatePreview.connect(self.updateUI)
+        self.mapEditGraphics.selectedItem.connect(self.updateSelection)
         self.tabWidget = QTabWidget()
         self.tabWidget.currentChanged.connect(
             self.mapEditGraphics.updateSelectedTab)
@@ -40,7 +41,7 @@ class MapEditor(QWidget):
 
         self.tabWidget.addTab(self.tilePicker, "Tiles")
         self.tabWidget.addTab(self.groupPicker, "Groups")
-        self.tabWidget.addTab(QWidget(), "Objects")
+        self.tabWidget.addTab(QLabel("Coming Soon"), "Objects")
         self.tabWidget.addTab(self.notesWidget, "Notes")
 
         self.btnGroup = QWidget()
@@ -63,6 +64,11 @@ class MapEditor(QWidget):
         self.addColBtn.clicked.connect(self.addGroupCol)
         self.delColBtn = QPushButton("Del Col")
         self.delColBtn.clicked.connect(self.delGroupCol)
+
+        self.addRowBtn.setEnabled(False)
+        self.delRowBtn.setEnabled(False)
+        self.addColBtn.setEnabled(False)
+        self.delColBtn.setEnabled(False)
 
         btnLayout.addWidget(self.cwBtn, 0, 0)
         btnLayout.addWidget(self.ccwBtn, 1, 0)
@@ -117,6 +123,10 @@ class MapEditor(QWidget):
 
     def delGroupCol(self):
         self.model.delCol()
+
+    def updateSelection(self, tab, id):
+        if tab == 3:
+            self.notesWidget.setSelectedNote(id)
 
     """
     *------------*
@@ -330,13 +340,16 @@ class MapEditorGraphics(EMModelGraphics):
                     elif self.openTab == 3:
                         print("Checking the Notes Tab")
                         mp = self.mousePosition
-                        for note in self.model.getMapNotes():
+                        notes = self.model.getMapNotes()
+                        for i in range(len(notes)):
+                            note = notes[i]
                             print("{}, {} -> {}".format(
                                 mp, note.getPos(), self.distanceHelper(
                                     mp, note.getPos())))
                             if self.distanceHelper(mp, note.getPos()) <= 1000:
                                 print("Bingo!")
                                 self.pressedItem = (3, note)
+                                self.selectedItem.emit(3, i+1)
                                 break
 
                                 # perform stuff
@@ -373,42 +386,6 @@ class MapEditorGraphics(EMModelGraphics):
         else:
             self.mousePressed = False
             self.pressedItem = None
-
-
-def printRot(rot, grid, numRows, numCols):
-    tGrid = []
-    if rot == 0:
-        tGrid = grid
-    if rot == 1:
-        for y in range(numCols):
-            tGrid.append([])
-            for x in range(numRows-1, -1, -1):
-                tGrid[-1].append(grid[x][y])
-    elif rot == 2:
-        for y in range(numRows-1, -1, -1):
-            tGrid.append([])
-            for x in range(numCols-1, -1, -1):
-                tGrid[-1].append(grid[y][x])
-    elif rot == 3:
-        for y in range(numCols-1, -1, -1):
-            tGrid.append([])
-            for x in range(numRows):
-                tGrid[-1].append(grid[x][y])
-    print(tGrid)
-
-
-def doMath(numRows=2, numCols=3):
-    num = 1
-    grid = []
-    for y in range(numRows):
-        grid.append([])
-        for x in range(numCols):
-            grid[-1].append(num)
-            num += 1
-
-    for i in range(4):
-        # print("option={}".format(i))
-        printRot(i, grid, numRows, numCols)
 
 
 def main():
