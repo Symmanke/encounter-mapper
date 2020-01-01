@@ -227,7 +227,9 @@ class TileEditor(EMModelEditor):
 
 class TilePreviewWidget(EMModelGraphics):
     """
-    widget that displays the preview of the object.
+    widget that displays the preview of the object. Contains means to interact
+    with specific nodes, modifying the tile appearance through mouse clicks.
+    Interaction is turned off only when preview is True
     """
 
     pointSelected = pyqtSignal(int)

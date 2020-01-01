@@ -11,6 +11,11 @@ from EMBaseClasses import EMModelEditor, EMModelGraphics, EMModelPicker
 
 
 class GroupEditor(EMModelEditor):
+    """
+    The GroupEditor handles the creation of groupModels, which are groups of
+    Tiles. It contains a ModelPicker displaying tiles and a groupPreview which
+    handles the graphical representation and interaction with the model.
+    """
 
     def __init__(self, model=None):
         super(GroupEditor, self).__init__(model)
@@ -116,6 +121,11 @@ class GroupEditor(EMModelEditor):
 
 
 class GroupPreview(EMModelGraphics):
+    """
+    Preview object for displaying and interacting with groups. Can be Used
+    in conjunction with the GroupEditor to create a group of tiles, or in the
+    picker class to depict a group of objects.
+    """
 
     updatePreview = pyqtSignal()
 

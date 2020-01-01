@@ -13,6 +13,13 @@ import json
 
 
 class EMPaletteEditor(QWidget):
+    """
+    Editor for the ColorModel. Enables the creation and editing of color
+    palettes.
+
+    This class was the first one created in the project, and as a result
+    needs to be refactored in order to match the paradigms used later.
+    """
 
     colorApplied = pyqtSignal(int, int, int)
     colorCanceled = pyqtSignal()

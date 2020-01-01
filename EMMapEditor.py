@@ -12,6 +12,11 @@ from EMNotesTab import NotesTab
 
 
 class MapEditor(QWidget):
+    """
+    Editor to create maps from tiles, objects, and notes. This class primarily
+    handles the context switches whenever a new tab is selected from the tab
+    bar.
+    """
 
     def __init__(self, model=None):
         # Set ui in here
@@ -174,6 +179,11 @@ class MapEditor(QWidget):
 
 
 class MapEditorGraphics(EMModelGraphics):
+
+    """
+    Graphical Representation of the mpap object. Similar to the Group Editor,
+    but also contains means to interact with notes, etc.
+    """
 
     updatePreview = pyqtSignal()
 

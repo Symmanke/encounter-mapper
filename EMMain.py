@@ -9,7 +9,12 @@ from EMHelper import ModelManager
 
 
 class EMMain(QMainWindow):
-    """docstring for EMMain."""
+    """
+    The main class for Encounter Mapper.
+
+    Handles the saving and loading of maps. Future implementations may include
+    setting up tabs for maps, enabling multiple encounters to be edited at once
+    """
 
     def __init__(self, map=None):
         super(EMMain, self).__init__()

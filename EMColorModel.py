@@ -2,6 +2,13 @@ from PyQt5.QtGui import QColor
 
 
 class EMColorModel:
+    """
+    Contains an array of colors used for painting the bg and FG of tiles.
+
+    This class will be added to EMModel.py in the future, and updated to
+    match the existing model classes.
+    """
+
     def __init__(self, name, r, g, b):
         self.name = name
         self.color = QColor(r, g, b)

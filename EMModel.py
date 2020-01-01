@@ -3,6 +3,10 @@ from PyQt5.QtCore import (QObject, pyqtSignal, QPoint)
 
 
 class EMModel(QObject):
+    """
+    Base model class. Contians the necessary methods used to save, load,
+    and fetch models from ModelManager.
+    """
 
     modelUpdated = pyqtSignal()
 
@@ -48,6 +52,14 @@ class EMModel(QObject):
 
 
 class TileModel(EMModel):
+    """
+    Model for an individual tile. Current tile models contain a list of
+    points to draw the FG object, and FG and BG colors.
+
+    Future implementations may allow for multiple FG objects, as well as
+    different textures to overlay on top of the BG.
+    """
+
     def __init__(self, name="new layer", pointList=None,
                  fgTupe=None, bgTupe=None, uid=-1):
         super(TileModel, self).__init__(name, "", uid)
@@ -233,6 +245,12 @@ class TileModel(EMModel):
 
 
 class GroupModel(EMModel):
+    """
+    Model representation of a group of tiles. Contains a matrix which contains
+    the UID of each tile inside it, as well as any rotations/transformations
+    added to them.
+    """
+
     def __init__(self, name="new group", tileGrid=None,
                  ttf=None, uid=-1):
         super(GroupModel, self).__init__(name, "", uid)
@@ -400,6 +418,14 @@ class GroupModel(EMModel):
 
 
 class MapModel(GroupModel):
+    """
+    Model for the Map objects.
+
+    Unlike other models, the MapModel doesn't get stored in ModelManager;
+    rather, it is meant to be saved and loaded by the user. MapModel inherits
+    the grid from groupModel, but also contains a list of notes and objects to
+    populate the grid with.
+    """
 
     def __init__(self, name="my encounter", tileGrid=None,
                  ttf=None, mapObjects=None, mapNotes=None, uid=-1):

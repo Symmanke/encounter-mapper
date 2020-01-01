@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QListWidget,
                              QPushButton, QLabel, QTextEdit, QLineEdit,
-                             QListWidgetItem, QVBoxLayout, QComboBox,
-                             QDialog, QApplication)
+                             QVBoxLayout, QComboBox, QDialog)
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtGui import QPainter
@@ -9,6 +8,20 @@ from EMBaseClasses import EMEditor
 
 
 class NotesTab(QWidget):
+    """
+    Tab used to create and organize notes for a given map
+
+    Unlike the other options, notes are based in text, not in pictures. Thus
+    a unique picker is needed to sift through them. The notes tab allows users
+    to create notes, switch between them, and open the editor to make changes.
+
+    Notes will become more relevant once LaTex integration is complete
+
+    Signals:
+    ---------
+    noteSelected(int):
+    emitted whenever a new note index is selected. Used to update the map
+    """
     noteSelected = pyqtSignal(int)
 
     def __init__(self, currentEditor=None):
@@ -140,6 +153,15 @@ class NotesTab(QWidget):
 
 
 class NoteEditor(EMEditor):
+    """
+    Editor for note data. Note data contains 3 parts: The title, description,
+    and type (indicates the badge).
+
+    Since most of the data will be typed out, and to prevent excess calls from
+    constantly updating note data, the data is not generated inside the editor.
+    At the time of saving, getGeneratedNote() should be called, which will
+    create note data from the stuff.
+    """
 
     def __init__(self, note=None):
         super(NoteEditor, self).__init__()
@@ -181,6 +203,13 @@ class NoteEditor(EMEditor):
 
 
 class NoteBadge(QWidget):
+    """
+    Note badge is a graphical represenation of the note on the map and
+    elsewhere. It will contain an image representing the different types
+    of notes, as well as a number, specifying the note index.
+
+    Current implementation uses a colored rectangle as a placeholder for images
+    """
     badgeColors = [Qt.blue, Qt.red, Qt.black, Qt.green]
 
     def __init__(self, note=None, index=0):
@@ -213,6 +242,14 @@ class NoteBadge(QWidget):
 
 
 class NoteData(QObject):
+    """
+    Data for the note.
+
+    Unlike the model objects, notes do not exist on their own and are always
+    tied to a map. Thus, it didn't completely make sense to have them be an
+    EMModel object. During saving, the noteData is added in JSon Format to the
+    EMMapModel data.
+    """
 
     noteEmblemUpdated = pyqtSignal()
 
