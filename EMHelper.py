@@ -19,7 +19,8 @@ along with Encounter Mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from EMModel import TileModel
+from EMModel import TileModel, GroupModel, MapModel
+from PyQt5.QtGui import QPolygon, QImage, QPainter
 
 import json
 
@@ -327,3 +328,86 @@ class ModelManager():
             cls.tileModels.insert(index, model)
         cls.tileModelsByID[model.getUid()] = model
         cls.saveTiles()
+
+
+class EMImageGenerator():
+    """
+    Helper class for generating the images used to display the tileMap.
+
+    Rather than always passing inheritance, I am planning on using the Helper
+    class instead. This can be used in a variety of scenarios, but also assist
+    with creating images to save.
+
+    images generated will default to 72ppi, with 3 in. Tiles (216p per tile).
+    This happen to be the dimensions I use for my own custom tiles, and makes
+    things easier for my personal use. In the future, I plan to allow this to
+    be customized, although some user-created custom images may be required
+    at that time.
+    """
+
+    @classmethod
+    def genImageFromModel(cls, model,
+                          displayObjects=False, displayNotes=False):
+        genImage = None
+        if model is MapModel:
+            genImage = QImage(216 * model.getNumCols(),
+                              216 * model.getNumRows(),
+                              QImage.Format_RGB32)
+            # displayObjects and displayNotes will be added here in the future
+        elif model is GroupModel:
+            genImage = QImage(216 * model.getNumCols(),
+                              216 * model.getNumRows(),
+                              QImage.Format_RGB32)
+        elif model is TileModel:
+            genImage = QImage(216, 216, QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            cls.drawTile(painter, model)
+        return genImage
+
+    def updateModelImage(cls, model, x, y, x2=-1, y2=-1, pointArr=None):
+        pass
+
+    @classmethod
+    def drawTileGroup(cls, painter, model):
+        cachedTiles = {}
+        grid = model.getTileGrid()
+        for y in range(model.getNumRows()):
+            for x in range(model.getNumCols()):
+                tile = grid[y][x]
+                if tile[0] == -1:
+                    # draw Empty Tile
+                    pass
+                else:
+                    if tile[0] not in cachedTiles:
+                        cachedTiles[tile[0]] = ModelManager.fetchByUid(
+                            ModelManager.Tile, tile[0])
+                    tileModel = cachedTiles[tile[0]]
+                    if tileModel is not None:
+                        cls.drawTile(painter, tileModel, x, y,
+                                     tile[1], tile[2], tile[3])
+                    else:
+                        # Draw error Tile
+                        pass
+
+        pass
+
+    @classmethod
+    def drawTile(cls, painter, model, xind=0, yind=0,
+                 options=(0, False, False)):
+        # Res = 3 in. at 72ppi. 72*3 = 216
+        res = 216
+        bg = model.getBgColor()
+        painter.setPen(bg)
+        painter.setBrush(bg)
+        painter.drawRect(int(res * xind),
+                         int(res * yind),
+                         res, res)
+        points = model.generatePointOffset(
+            xind, yind, res,
+            0, 0,
+            options[0], options[1], options[2])
+        fg = model.getFgColor()
+        painter.setBrush(fg)
+        painter.setPen(fg)
+        poly = QPolygon(points)
+        painter.drawPolygon(poly)
