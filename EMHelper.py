@@ -126,6 +126,12 @@ class ModelManager():
         f.close()
 
     @classmethod
+    def saveImageToFile(cls, img, path):
+        # f = open(path+".png", "w+")
+        img.save(path+".png", "PNG")
+        # f.close()
+
+    @classmethod
     def createCache(cls, name):
         modelList = cls.loadedModels[name][cls.List]
         idCache = cls.loadedModels[name][cls.ByUid]
@@ -349,19 +355,28 @@ class EMImageGenerator():
     def genImageFromModel(cls, model,
                           displayObjects=False, displayNotes=False):
         genImage = None
-        if model is MapModel:
+        if isinstance(model, MapModel):
+            print("Map Model")
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
                               QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            # painter.begin(genImage)
+            cls.drawTileGroup(painter, model)
+            # painter.end()
             # displayObjects and displayNotes will be added here in the future
-        elif model is GroupModel:
+        elif isinstance(model, GroupModel):
+            print("Group Model")
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
                               QImage.Format_RGB32)
-        elif model is TileModel:
+        elif isinstance(model, TileModel):
+            print("Tile Model")
             genImage = QImage(216, 216, QImage.Format_RGB32)
             painter = QPainter(genImage)
             cls.drawTile(painter, model)
+        else:
+            print("Wrong Model")
         return genImage
 
     def updateModelImage(cls, model, x, y, x2=-1, y2=-1, pointArr=None):
@@ -380,11 +395,11 @@ class EMImageGenerator():
                 else:
                     if tile[0] not in cachedTiles:
                         cachedTiles[tile[0]] = ModelManager.fetchByUid(
-                            ModelManager.Tile, tile[0])
+                            ModelManager.TileName, tile[0])
                     tileModel = cachedTiles[tile[0]]
                     if tileModel is not None:
                         cls.drawTile(painter, tileModel, x, y,
-                                     tile[1], tile[2], tile[3])
+                                     (tile[1], tile[2], tile[3]))
                     else:
                         # Draw error Tile
                         pass

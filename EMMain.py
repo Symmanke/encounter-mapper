@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (QApplication, QStackedWidget, QFileDialog,
 # from EMMapWidget import EMMapWidget
 from EMMapEditor import MapEditor
 from EMModel import MapModel
-from EMHelper import ModelManager
+from EMHelper import ModelManager, EMImageGenerator
 
 
 class EMMain(QMainWindow):
@@ -52,6 +52,9 @@ class EMMain(QMainWindow):
         saveAction.triggered.connect(self.saveEncounter)
         saveAsAction = QAction("Save As", self)
         saveAsAction.triggered.connect(self.saveAsEncounter)
+        exportImageAction = QAction("Export Map", self)
+        exportImageAction.triggered.connect(self.exportEncounterMap)
+
         quitAction = QAction("Quit", self)
 
         undoAction = QAction("Undo", self)
@@ -65,6 +68,7 @@ class EMMain(QMainWindow):
         fileMenu.addAction(saveAction)
 
         fileMenu.addAction(saveAsAction)
+        fileMenu.addAction(exportImageAction)
         fileMenu.addAction(quitAction)
 
         editMenu = menuBar.addMenu("Edit")
@@ -117,6 +121,18 @@ class EMMain(QMainWindow):
 
     def saveEncounter(self):
         pass
+
+    def exportEncounterMap(self):
+        filePath = QFileDialog.getSaveFileName()
+        if filePath is not None:
+            # self.mapEditor.setFilePath(filePath)
+            model = self.mapEditor.getModel()
+            if model is not None:
+                mapImage = EMImageGenerator.genImageFromModel(model)
+                if mapImage is not None:
+                    ModelManager.saveImageToFile(mapImage, filePath[0])
+                else:
+                    print("model is not MapModel")
 
 
 app = QApplication([])
