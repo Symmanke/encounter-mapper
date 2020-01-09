@@ -22,12 +22,13 @@ If not, see <https://www.gnu.org/licenses/>.
 from PyQt5.QtCore import (Qt, pyqtSignal)
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
-                             QPushButton, QSpinBox, QWidget,
+                             QPushButton, QSpinBox, QWidget, QComboBox,
                              QListWidget, QDialog, QVBoxLayout)
 
 from EMPaletteEditor import EMPaletteEditor
 from EMModel import TileModel
 from EMBaseClasses import EMModelEditor, EMModelGraphics
+from EMHelper import EMImageGenerator
 
 
 class TileEditor(EMModelEditor):
@@ -80,18 +81,27 @@ class TileEditor(EMModelEditor):
         self.bgColorBtn = QPushButton("Set BG")
         self.bgColorBtn.clicked.connect(self.setBGColor)
 
+        self.bgTextureBox = QComboBox()
+        self.bgTextureBox.addItem("None")
+        self.bgTextureBox.addItem("Tile")
+        self.bgTextureBox.addItem("Grass")
+        self.bgTextureBox.addItem("Wood")
+        self.bgTextureBox.currentIndexChanged.connect(self.updateBGTexture)
+
         self.buttonHolder = QWidget()
         bhLayout = QGridLayout()
         bhLayout.addWidget(self.addPointBtn, 0, 0, 1, 3)
         bhLayout.addWidget(self.delPointBtn, 0, 3, 1, 3)
         bhLayout.addWidget(self.upPointBtn, 1, 0, 1, 3)
         bhLayout.addWidget(self.downPointBtn, 1, 3, 1, 3)
-        bhLayout.addWidget(self.cwBtn, 2, 0, 1, 2)
-        bhLayout.addWidget(self.ccwBtn, 3, 0, 1, 2)
-        bhLayout.addWidget(self.hfBtn, 2, 2, 1, 2)
-        bhLayout.addWidget(self.vfBtn, 3, 2, 1, 2)
-        bhLayout.addWidget(self.fgColorBtn, 2, 4, 1, 2)
-        bhLayout.addWidget(self.bgColorBtn, 3, 4, 1, 2)
+        bhLayout.addWidget(self.bgTextureBox, 2, 0)
+        bhLayout.addWidget(QComboBox(), 3, 0)
+        bhLayout.addWidget(self.cwBtn, 4, 0, 1, 2)
+        bhLayout.addWidget(self.ccwBtn, 5, 0, 1, 2)
+        bhLayout.addWidget(self.hfBtn, 4, 2, 1, 2)
+        bhLayout.addWidget(self.vfBtn, 5, 2, 1, 2)
+        bhLayout.addWidget(self.fgColorBtn, 4, 4, 1, 2)
+        bhLayout.addWidget(self.bgColorBtn, 5, 4, 1, 2)
         self.buttonHolder.setLayout(bhLayout)
 
         layout.addWidget(self.previewWidget, 0, 0, 7, 1)
@@ -166,6 +176,9 @@ class TileEditor(EMModelEditor):
         self.paletteDialog.setLayout(layout)
         self.paletteDialog.exec_()
         # self.paletteEditor.show()
+
+    def updateBGTexture(self):
+        self.model.setBGTexture(self.bgTextureBox.currentText())
 
     def setBGColor(self):
         bg = self.model.getFgColor()
@@ -274,7 +287,11 @@ class TilePreviewWidget(EMModelGraphics):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if(self.model is not None):
-            self.drawTile(painter, 0, 0, self.model)
+            tempImg = EMImageGenerator.genImageFromModel(self.model)
+            tempImg.scaled(500, 500)
+            # TODO: Convert to Pixmap
+            painter.drawImage(10, 10, tempImg.scaled(500, 500))
+            # self.drawTile(painter, 0, 0, self.model)
             if not self.preview:
                 points = self.model.generatePointOffset(
                     0, 0, self.tileSize, self.xOffset, self.yOffset)

@@ -351,6 +351,8 @@ class EMImageGenerator():
     at that time.
     """
 
+    textureCache = {}
+
     @classmethod
     def genImageFromModel(cls, model,
                           displayObjects=False, displayNotes=False):
@@ -417,6 +419,16 @@ class EMImageGenerator():
         painter.drawRect(int(res * xind),
                          int(res * yind),
                          res, res)
+        # if bgTexture != "None":
+        # Add Background texture
+        txtName = model.getBgTexture()
+        if txtName != "None":
+            if txtName not in cls.textureCache:
+                # Attempt to load texture
+                cls.loadTexture(txtName)
+            texture = cls.textureCache[txtName]
+            if texture is not None:
+                painter.drawImage(0, 0, texture, 0, 0, 216, 216)
         points = model.generatePointOffset(
             xind, yind, res,
             0, 0,
@@ -426,3 +438,16 @@ class EMImageGenerator():
         painter.setPen(fg)
         poly = QPolygon(points)
         painter.drawPolygon(poly)
+
+    @classmethod
+    def loadTexture(cls, txtName):
+        texture = QImage()
+        if texture.load("res/bg_{}.png".format(txtName.lower()), "PNG"):
+            cls.textureCache[txtName] = texture
+            print("successful Load!")
+            return True
+        else:
+            # include None to prevent multiple loads
+            cls.textureCache[txtName] = None
+            print("WARNING: {} not able to be loaded".format(txtName))
+            return False

@@ -94,6 +94,7 @@ class TileModel(EMModel):
         fg = (101, 101, 102) if fgTupe is None else fgTupe
         self.bgColor = QColor(bg[0], bg[1], bg[2])
         self.fgColor = QColor(fg[0], fg[1], fg[2])
+        self.bgTexture = "None" if bgTupe is None else bgTupe[3]
         self.selectedIndex = len(self.pointList) - 1
         self.tags = []
 
@@ -122,6 +123,10 @@ class TileModel(EMModel):
 
     def setFgColor(self, r, g, b):
         self.fgColor = QColor(r, g, b)
+
+    def setBGTexture(self, texture):
+        self.bgTexture = texture
+        self.modelUpdated.emit()
 
     def addPoint(self, x, y):
         # if self.selectedIndex == -1:
@@ -193,6 +198,9 @@ class TileModel(EMModel):
 
     def getSelectedPoint(self):
         return self.pointList[self.selectedIndex]
+
+    def getBgTexture(self):
+        return self.bgTexture
 
     def getNumPoints(self):
         return len(self.pointList)
