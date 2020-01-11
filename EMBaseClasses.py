@@ -204,7 +204,7 @@ class ModelPickerListItem(QWidget):
             layout = QHBoxLayout()
             self.preview = previewClass.previewWidget(self.model)
             layout.addWidget(self.preview)
-            layout.addWidget(QLabel(self.model.getName()))
+            layout.addWidget(QLabel(self.model.getPreviewName()))
             self.setLayout(layout)
 
 

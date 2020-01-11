@@ -128,7 +128,8 @@ class EMMain(QMainWindow):
             # self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()
             if model is not None:
-                mapImage = EMImageGenerator.genImageFromModel(model)
+                mapImage = EMImageGenerator.genImageFromModel(
+                    model, ("drawGrid"))
                 if mapImage is not None:
                     ModelManager.saveImageToFile(mapImage, filePath[0])
                 else:

@@ -46,6 +46,9 @@ class EMModel(QObject):
     def getName(self):
         return self.name
 
+    def getPreviewName(self):
+        return self.name
+
     def setName(self, name):
         self.name = name
 
@@ -405,6 +408,9 @@ class GroupModel(EMModel):
 
     def getNumCols(self):
         return self.cols
+
+    def getPreviewName(self):
+        return "{} ({}x{})".format(self.name, self.cols, self.rows)
 
     def getTilesToFetch(self):
         return self.tilesToFetch

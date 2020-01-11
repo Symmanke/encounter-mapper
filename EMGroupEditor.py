@@ -175,7 +175,8 @@ class GroupPreview(EMModelGraphics):
     def setPTile(self, tileId):
         self.selectedObject[0] = tileId
         self.pTileImage = EMImageGenerator.genImageFromModel(
-            ModelManager.fetchByUid(ModelManager.TileName, tileId))
+            ModelManager.fetchByUid(ModelManager.TileName, tileId),
+            {"transformOptions": self.sOptions})
         self.updateModelList(tileId)
 
     def transformP(self, type):
@@ -187,6 +188,11 @@ class GroupPreview(EMModelGraphics):
             self.sOptions[1] = not self.sOptions[1]
         elif type == "v":
             self.sOptions[2] = not self.sOptions[2]
+        if self.selectedObject[0] != -1:
+            self.pTileImage = EMImageGenerator.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TileName,
+                                        self.selectedObject[0]),
+                {"transformOptions": self.sOptions})
         self.updatePreview.emit()
 
     def removeTileCache(self, id):
@@ -225,35 +231,38 @@ class GroupPreview(EMModelGraphics):
             #                 painter, self.mouseIndex[0], self.mouseIndex[1],
             #                 model, self.sOptions, True)
 
-            """Commented out for bug testing"""
-            # bgColor = Qt.white if self.preview else Qt.black
-            # painter.setBrush(bgColor)
-            # painter.setPen(bgColor)
-            # painter.drawRect(0, 0, self.width, self.height)
+            bgColor = Qt.white if self.preview else Qt.black
+            painter.setBrush(bgColor)
+            painter.setPen(bgColor)
+            painter.drawRect(0, 0, self.width, self.height)
 
             img = EMImageGenerator.genImageFromModel(self.model)
             scale = (self.tileSize * self.numCols,
                      self.tileSize * self.numRows)
             painter.drawImage(int(self.xOffset), int(self.yOffset),
                               img.scaled(scale[0], scale[1]))
-            EMImageGenerator.drawGrid(painter, self.numCols, self.numRows,
-                                      self.xOffset, self.yOffset,
-                                      self.tileSize)
+            if self.preview:
+                EMImageGenerator.drawGrid(
+                    painter, self.numCols, self.numRows, self.xOffset,
+                    self.yOffset, self.tileSize, Qt.black,
+                    EMImageGenerator.GridPatternPreviewSimple, 1)
+            else:
+                EMImageGenerator.drawGrid(painter, self.numCols, self.numRows,
+                                          self.xOffset, self.yOffset,
+                                          self.tileSize)
 
             # draw preview Image
             if not self.preview:
                 if self.mouseIndex != (-1, -1) and not self.mousePressed:
                     if (self.selectedObject[0] != -1
                             and self.pTileImage is not None):
-                        pImg = EMImageGenerator.transformImage(self.pTileImage,
-                                                               self.sOptions)
                         tp = (int(self.xOffset +
                                   (self.mouseIndex[0] * self.tileSize)),
                               int(self.yOffset +
                                   (self.mouseIndex[1] * self.tileSize)))
                         painter.drawImage(
                             tp[0], tp[1],
-                            pImg.scaled(
+                            self.pTileImage.scaled(
                                 self.tileSize, self.tileSize))
                         EMImageGenerator.drawGrid(
                             painter, 1, 1, tp[0], tp[1],

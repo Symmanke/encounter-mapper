@@ -20,7 +20,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from EMModel import TileModel, GroupModel, MapModel
-from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform
+from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform, QPen
 from PyQt5.QtCore import Qt
 
 import json
@@ -349,10 +349,15 @@ class EMImageGenerator():
     This happen to be the dimensions I use for my own custom tiles, and makes
     things easier for my personal use. In the future, I plan to allow this to
     be customized, although some user-created custom images may be required
-    at that time.
+    at that time. hello there
     """
 
     textureCache = {}
+
+    GridPatternExport = (5, 3, 3)
+    GridPatternStandard = (3, 1, 1)
+    GridPatternPreviewSimple = (2,)
+    GridPatternPreview = (2, 1, 1)
 
     @classmethod
     def genImageFromModel(cls, model, displayOptions=None):
@@ -363,10 +368,10 @@ class EMImageGenerator():
                               216 * model.getNumRows(),
                               QImage.Format_RGB32)
             painter = QPainter(genImage)
-            # painter.begin(genImage)
             cls.drawTileGroup(painter, model)
-            # painter.end()
-            # displayObjects and displayNotes will be added here in the future
+            if "drawGrid" in displayOptions:
+                cls.drawGrid(painter, model.getNumCols(), model.getNumRows(),
+                             0, 0, 216, Qt.black, cls.GridPatternExport)
         elif isinstance(model, GroupModel):
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
@@ -377,6 +382,9 @@ class EMImageGenerator():
             genImage = QImage(216, 216, QImage.Format_RGB32)
             painter = QPainter(genImage)
             cls.drawTile(painter, model)
+            if "transformOptions" in displayOptions:
+                cls.drawTile(painter, model, 0, 0,
+                             displayOptions["transformOptions"])
             if "drawGrid" in displayOptions:
                 cls.drawGrid(painter, 1, 1)
         else:
@@ -451,18 +459,23 @@ class EMImageGenerator():
 
     @classmethod
     def drawGrid(cls, painter, nc, nr, xoff=0, yoff=0,
-                 tileSize=216, penColor=None, lpt=3):
+                 tileSize=216, penColor=None, gp=None, lpt=3):
+        pattern = cls.GridPatternStandard if gp is None else gp
         pc = Qt.black if penColor is None else penColor
         painter.setPen(pc)
-        xLen = tileSize * nr
-        yLen = tileSize * nc
+        xLen = tileSize * nc
+        yLen = tileSize * nr
         dist = tileSize/lpt
-        for x in range((3*nc)+1):
+        print(pattern)
+        patternLen = len(pattern)
+        for x in range((lpt*nc)+1):
+            painter.setPen(QPen(pc, pattern[x % patternLen]))
             xd = int(x*dist)
-            painter.drawLine(xd+xoff, yoff, xd + xoff, yLen + xoff)
-            for y in range((3*nr)+1):
-                yd = int(y*dist)
-                painter.drawLine(xoff, yd + yoff, xLen + xoff, yd + yoff)
+            painter.drawLine(xd+xoff, yoff, xd + xoff, yLen + yoff)
+        for y in range((lpt*nr)+1):
+            painter.setPen(QPen(pc, pattern[y % patternLen]))
+            yd = int(y*dist)
+            painter.drawLine(xoff, yd + yoff, xLen + xoff, yd + yoff)
 
     @classmethod
     def transformImage(cls, img, options=(0, False, False)):

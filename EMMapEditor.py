@@ -263,9 +263,9 @@ class MapEditorGraphics(EMModelGraphics):
             self.sOptions[1] = not self.sOptions[1]
         elif type == "v":
             self.sOptions[2] = not self.sOptions[2]
-        print("--Options Updated--")
-        print(self.sOptions)
-        print(self.selectedObject)
+        # print("--Options Updated--")
+        # print(self.sOptions)
+        # print(self.selectedObject)
         if self.selectedObject[1] != -1:
             self.updateSelectedObject(self.selectedObject[1], 1)
         self.updatePreview.emit()
@@ -274,14 +274,18 @@ class MapEditorGraphics(EMModelGraphics):
         painter = QPainter(self)
         if(self.model is not None):
 
-            # painter.setBrush(Qt.black)
-            # painter.setPen(Qt.black)
-            # painter.drawRect(0, 0, self.width, self.height)
+            painter.setBrush(Qt.black)
+            painter.setPen(Qt.black)
+            painter.drawRect(0, 0, self.width, self.height)
+
             img = EMImageGenerator.genImageFromModel(self.model)
             scale = (self.tileSize * self.numCols,
                      self.tileSize * self.numRows)
             painter.drawImage(self.xOffset, self.yOffset,
                               img.scaled(scale[0], scale[1]))
+            EMImageGenerator.drawGrid(painter, self.numCols, self.numRows,
+                                      self.xOffset, self.yOffset,
+                                      self.tileSize)
 
             index = 1
             for note in self.model.getMapNotes():
