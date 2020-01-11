@@ -287,10 +287,14 @@ class TilePreviewWidget(EMModelGraphics):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if(self.model is not None):
-            tempImg = EMImageGenerator.genImageFromModel(self.model)
-            tempImg.scaled(500, 500)
+            self.modelImage = EMImageGenerator.genImageFromModel(self.model)
+            # tempImg = EMImageGenerator.genImageFromModel(
+            #     self.model)
             # TODO: Convert to Pixmap
-            painter.drawImage(10, 10, tempImg.scaled(500, 500))
+            painter.drawImage(10, 10,
+                              self.modelImage.scaled(
+                                  self.tileSize, self.tileSize))
+            EMImageGenerator.drawGrid(painter, 1, 1, 10, 10, self.tileSize)
             # self.drawTile(painter, 0, 0, self.model)
             if not self.preview:
                 points = self.model.generatePointOffset(

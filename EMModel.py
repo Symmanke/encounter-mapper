@@ -104,7 +104,7 @@ class TileModel(EMModel):
         fg = model.getFgColor()
         mcopy = cls(model.getName(), model.getPoints(),
                     (fg.red(), fg.green(), fg.blue()),
-                    (bg.red(), bg.green(), bg.blue()),
+                    (bg.red(), bg.green(), bg.blue(), model.getBgTexture()),
                     model.getUid())
         return mcopy
 
@@ -112,9 +112,10 @@ class TileModel(EMModel):
     def createModelJS(cls, modelJS):
         fg = modelJS["fg"]
         bg = modelJS["bg"]
+        text = "None" if "bgTexture" not in modelJS else modelJS["bgTexture"]
         model = cls(modelJS["name"], modelJS["points"][0],
                     (fg["r"], fg["g"], fg["b"]),
-                    (bg["r"], bg["g"], bg["b"]),
+                    (bg["r"], bg["g"], bg["b"], text),
                     modelJS["uid"])
         return model
 
@@ -269,7 +270,8 @@ class TileModel(EMModel):
                 "r": self.bgColor.red(),
                 "g": self.bgColor.green(),
                 "b": self.bgColor.blue(),
-            }
+            },
+            "bgTexture": self.bgTexture
         }
 
 

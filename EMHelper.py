@@ -20,7 +20,8 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from EMModel import TileModel, GroupModel, MapModel
-from PyQt5.QtGui import QPolygon, QImage, QPainter
+from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform
+from PyQt5.QtCore import Qt
 
 import json
 
@@ -354,11 +355,10 @@ class EMImageGenerator():
     textureCache = {}
 
     @classmethod
-    def genImageFromModel(cls, model,
-                          displayObjects=False, displayNotes=False):
+    def genImageFromModel(cls, model, displayOptions=None):
+        displayOptions = [] if displayOptions is None else displayOptions
         genImage = None
         if isinstance(model, MapModel):
-            print("Map Model")
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
                               QImage.Format_RGB32)
@@ -368,15 +368,17 @@ class EMImageGenerator():
             # painter.end()
             # displayObjects and displayNotes will be added here in the future
         elif isinstance(model, GroupModel):
-            print("Group Model")
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
                               QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            cls.drawTileGroup(painter, model)
         elif isinstance(model, TileModel):
-            print("Tile Model")
             genImage = QImage(216, 216, QImage.Format_RGB32)
             painter = QPainter(genImage)
             cls.drawTile(painter, model)
+            if "drawGrid" in displayOptions:
+                cls.drawGrid(painter, 1, 1)
         else:
             print("Wrong Model")
         return genImage
@@ -393,6 +395,7 @@ class EMImageGenerator():
                 tile = grid[y][x]
                 if tile[0] == -1:
                     # draw Empty Tile
+                    cls.drawEmptyTile(painter, x, y)
                     pass
                 else:
                     if tile[0] not in cachedTiles:
@@ -428,7 +431,8 @@ class EMImageGenerator():
                 cls.loadTexture(txtName)
             texture = cls.textureCache[txtName]
             if texture is not None:
-                painter.drawImage(0, 0, texture, 0, 0, 216, 216)
+                painter.drawImage(res*xind, res*yind, texture,
+                                  res*(xind % 3), res*(yind % 3), 216, 216)
         points = model.generatePointOffset(
             xind, yind, res,
             0, 0,
@@ -438,6 +442,35 @@ class EMImageGenerator():
         painter.setPen(fg)
         poly = QPolygon(points)
         painter.drawPolygon(poly)
+
+    @classmethod
+    def drawEmptyTile(cls, painter, xInd, yInd):
+        painter.setPen(Qt.black)
+        painter.setBrush(Qt.white)
+        painter.drawRect(xInd * 216, yInd * 216, 216, 216)
+
+    @classmethod
+    def drawGrid(cls, painter, nc, nr, xoff=0, yoff=0,
+                 tileSize=216, penColor=None, lpt=3):
+        pc = Qt.black if penColor is None else penColor
+        painter.setPen(pc)
+        xLen = tileSize * nr
+        yLen = tileSize * nc
+        dist = tileSize/lpt
+        for x in range((3*nc)+1):
+            xd = int(x*dist)
+            painter.drawLine(xd+xoff, yoff, xd + xoff, yLen + xoff)
+            for y in range((3*nr)+1):
+                yd = int(y*dist)
+                painter.drawLine(xoff, yd + yoff, xLen + xoff, yd + yoff)
+
+    @classmethod
+    def transformImage(cls, img, options=(0, False, False)):
+        tImage = img
+        tImage = tImage.mirrored(options[1], options[2])
+        tImage = tImage.transformed(QTransform().rotate(
+            (90*options[0]) % 360))
+        return tImage
 
     @classmethod
     def loadTexture(cls, txtName):

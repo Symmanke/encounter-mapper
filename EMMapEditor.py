@@ -26,7 +26,7 @@ from PyQt5.QtGui import QPainter
 
 from EMTileEditor import TileEditor, TilePreviewWidget
 from EMModel import TileModel, GroupModel, MapModel
-from EMHelper import ModelManager
+from EMHelper import ModelManager, EMImageGenerator
 from EMGroupEditor import GroupEditor, GroupPreview
 from EMBaseClasses import EMModelGraphics, EMModelPicker
 from EMNotesTab import NotesTab
@@ -273,34 +273,50 @@ class MapEditorGraphics(EMModelGraphics):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if(self.model is not None):
-            painter.setBrush(Qt.black)
-            painter.setPen(Qt.black)
-            painter.drawRect(0, 0, self.width, self.height)
-            grid = self.model.getTileGrid()
-            for y in range(self.model.getNumRows()):
-                for x in range(self.model.getNumCols()):
-                    tile = grid[y][x]
-                    if tile[0] == -1:
-                        # Draw empty tile
-                        self.drawEmptyTile(painter, x, y)
-                    else:
-                        if tile[0] not in self.modelList:
-                            self.drawErrorTile(painter, x, y)
-                        else:
-                            cachedTM = self.modelList[tile[0]]
-                            if cachedTM is None:
-                                # Draw error tile
-                                self.drawErrorTile(painter, x, y)
-                            else:
-                                # draw actual tile
-                                self.drawTile(painter, x, y, cachedTM,
-                                              (tile[1], tile[2], tile[3]))
-            if self.mouseIndex != (-1, -1) and not self.mousePressed:
-                if self.openTab == 0 and self.selectedObject[0] != -1:
-                    self.drawPreviewTileSingle(painter)
-                elif self.openTab == 1 and self.selectedObject[1] != -1:
-                    self.drawPreviewTileGroup(painter)
-            # Draw the notes
+
+            # painter.setBrush(Qt.black)
+            # painter.setPen(Qt.black)
+            # painter.drawRect(0, 0, self.width, self.height)
+            img = EMImageGenerator.genImageFromModel(self.model)
+            scale = (self.tileSize * self.numCols,
+                     self.tileSize * self.numRows)
+            painter.drawImage(self.xOffset, self.yOffset,
+                              img.scaled(scale[0], scale[1]))
+
+            index = 1
+            for note in self.model.getMapNotes():
+                np = note.getPos()
+                note.drawNoteIcon(painter, np[0]-12, np[1]-12, 25, index)
+                index += 1
+
+            # painter.setBrush(Qt.black)
+            # painter.setPen(Qt.black)
+            # painter.drawRect(0, 0, self.width, self.height)
+            # grid = self.model.getTileGrid()
+            # for y in range(self.model.getNumRows()):
+            #     for x in range(self.model.getNumCols()):
+            #         tile = grid[y][x]
+            #         if tile[0] == -1:
+            #             # Draw empty tile
+            #             self.drawEmptyTile(painter, x, y)
+            #         else:
+            #             if tile[0] not in self.modelList:
+            #                 self.drawErrorTile(painter, x, y)
+            #             else:
+            #                 cachedTM = self.modelList[tile[0]]
+            #                 if cachedTM is None:
+            #                     # Draw error tile
+            #                     self.drawErrorTile(painter, x, y)
+            #                 else:
+            #                     # draw actual tile
+            #                     self.drawTile(painter, x, y, cachedTM,
+            #                                   (tile[1], tile[2], tile[3]))
+            # if self.mouseIndex != (-1, -1) and not self.mousePressed:
+            #     if self.openTab == 0 and self.selectedObject[0] != -1:
+            #         self.drawPreviewTileSingle(painter)
+            #     elif self.openTab == 1 and self.selectedObject[1] != -1:
+            #         self.drawPreviewTileGroup(painter)
+            # # Draw the notes
             index = 1
             for note in self.model.getMapNotes():
                 np = note.getPos()

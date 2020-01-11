@@ -307,6 +307,7 @@ class EMModelGraphics(QWidget):
         self.modelList = {}
         self.mouseIndex = (-1, -1)
         self.mousePressed = False
+        self.modelImage = None
         if cached:
             self.createModelList()
 
@@ -331,6 +332,9 @@ class EMModelGraphics(QWidget):
         if id != -1:
             self.modelList[id] = ModelManager.fetchByUid(
                 ModelManager.TileName, id)
+
+    def getModelImage(self):
+        return self.modelImage
 
     def getSOptions(self):
         return (self.sOptions[0], self.sOptions[1],
