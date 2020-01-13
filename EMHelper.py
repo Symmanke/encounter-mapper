@@ -466,7 +466,7 @@ class EMImageGenerator():
         xLen = tileSize * nc
         yLen = tileSize * nr
         dist = tileSize/lpt
-        print(pattern)
+        # print(pattern)
         patternLen = len(pattern)
         for x in range((lpt*nc)+1):
             painter.setPen(QPen(pc, pattern[x % patternLen]))
