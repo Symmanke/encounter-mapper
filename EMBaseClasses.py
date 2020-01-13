@@ -294,6 +294,7 @@ class EMModelGraphics(QWidget):
                  tileSize=100, width=500, height=500,
                  preview=False, cached=False, sOptions=None):
         super(EMModelGraphics, self).__init__()
+        self.zPercent = 50
         self.model = model
         self.numRows = rows
         self.numCols = cols
@@ -339,6 +340,19 @@ class EMModelGraphics(QWidget):
     def getSOptions(self):
         return (self.sOptions[0], self.sOptions[1],
                 self.sOptions[2])
+
+    def getZoomPercentage(self):
+        return self.zPercent
+
+    def updateZoom(self, dz):
+        percent = (min(200, max(25, self.getZoomPercentage() + dz)))
+        self.setZoomPercentage(percent)
+        self.repaint()
+
+    def setZoomPercentage(self, zp):
+        self.zPercent = zp
+        self.tileSize = 216 * (zp/100)
+        self.calculateSize()
 
     def calculateSize(self):
         # TODO: Calculate scale as well in Future

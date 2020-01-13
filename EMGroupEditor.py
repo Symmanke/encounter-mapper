@@ -171,8 +171,9 @@ class GroupPreview(EMModelGraphics):
             Qt.Key_R: (self.transformP, "cw"),
             Qt.Key_R | Qt.ShiftModifier: (self.transformP, "ccw"),
             Qt.Key_F: (self.transformP, "h"),
-            Qt.Key_F | Qt.ShiftModifier: (self.transformP, "v")
-
+            Qt.Key_F | Qt.ShiftModifier: (self.transformP, "v"),
+            Qt.Key_0: (self.updateZoom, 5),
+            Qt.Key_Minus: (self.updateZoom, -5),
         }
 
     @classmethod

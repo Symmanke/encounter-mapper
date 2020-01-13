@@ -226,6 +226,15 @@ class MapEditorGraphics(EMModelGraphics):
         self.mousePosition = (-1, -1)
         self.pressedItem = None
 
+        self.keyBindings = {
+            Qt.Key_R: (self.transformS, "cw"),
+            Qt.Key_R | Qt.ShiftModifier: (self.transformS, "ccw"),
+            Qt.Key_F: (self.transformS, "h"),
+            Qt.Key_F | Qt.ShiftModifier: (self.transformS, "v"),
+            Qt.Key_0: (self.updateZoom, 5),
+            Qt.Key_Minus: (self.updateZoom, -5),
+        }
+
     def setModel(self, model):
         self.model = model
         self.rows = model.getNumRows()
@@ -330,6 +339,15 @@ class MapEditorGraphics(EMModelGraphics):
         EMImageGenerator.drawGrid(
             painter, model.getNumCols(), model.getNumRows(),
             point[0], point[1], self.tileSize, Qt.red)
+
+    def keyPressEvent(self, event):
+        if self.preview:
+            event.ignore()
+        else:
+            key = event.key() | int(event.modifiers())
+            if key in self.keyBindings:
+                command = self.keyBindings[key]
+                command[0](command[1])
 
     def mousePressEvent(self, QMouseEvent):
         if self.preview:
