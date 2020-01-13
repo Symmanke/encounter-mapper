@@ -19,10 +19,10 @@ along with Encounter Mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from PyQt5.QtWidgets import (QApplication, QLabel,
+from PyQt5.QtWidgets import (QApplication, QLabel, QScrollArea,
                              QGridLayout, QTabWidget, QWidget, QPushButton)
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPalette
 
 from EMTileEditor import TileEditor, TilePreviewWidget
 from EMModel import TileModel, GroupModel, MapModel
@@ -45,11 +45,23 @@ class MapEditor(QWidget):
         layout = QGridLayout()
         # Create a tab widget
         self.model = MapModel() if model is None else model
+        self.model.modelUpdated.connect(self.updateUI)
+
         self.pressedItem = None
         self.filePathOfModel = None
+
         self.mapEditGraphics = MapEditorGraphics(self.model)
         self.mapEditGraphics.updatePreview.connect(self.updateUI)
         self.mapEditGraphics.selectedItem.connect(self.updateSelection)
+
+        # Add Scrollable area for groupPreview
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setWidget(self.mapEditGraphics)
+        self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setAlignment(Qt.AlignCenter)
+        self.scrollArea.setMinimumWidth(500)
+        self.scrollArea.setMinimumHeight(500)
+
         self.tabWidget = QTabWidget()
         self.tabWidget.currentChanged.connect(
             self.mapEditGraphics.updateSelectedTab)
@@ -91,11 +103,6 @@ class MapEditor(QWidget):
         self.delColBtn = QPushButton("Del Col")
         self.delColBtn.clicked.connect(self.delGroupCol)
 
-        self.addRowBtn.setEnabled(False)
-        self.delRowBtn.setEnabled(False)
-        self.addColBtn.setEnabled(False)
-        self.delColBtn.setEnabled(False)
-
         btnLayout.addWidget(self.cwBtn, 0, 0)
         btnLayout.addWidget(self.ccwBtn, 1, 0)
         btnLayout.addWidget(self.hfBtn, 0, 1)
@@ -106,7 +113,7 @@ class MapEditor(QWidget):
         btnLayout.addWidget(self.delColBtn, 1, 3)
         self.btnGroup.setLayout(btnLayout)
 
-        layout.addWidget(self.mapEditGraphics, 0, 0)
+        layout.addWidget(self.scrollArea, 0, 0)
         layout.addWidget(self.tabWidget, 0, 1, 2, 1)
         layout.addWidget(self.btnGroup, 1, 0)
         self.setLayout(layout)
@@ -196,6 +203,7 @@ class MapEditor(QWidget):
         # self.modelNameEdit.setText(self.model.getName())
         # update the preview
         # self.mapEditGraphics.calculateOffsets()
+        self.mapEditGraphics.calculateSize()
         self.mapEditGraphics.repaint()
 
 
@@ -270,53 +278,17 @@ class MapEditorGraphics(EMModelGraphics):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if(self.model is not None):
-
-            painter.setBrush(Qt.black)
-            painter.setPen(Qt.black)
-            painter.drawRect(0, 0, self.width, self.height)
+            nr = self.model.getNumRows()
+            nc = self.model.getNumCols()
 
             img = EMImageGenerator.genImageFromModel(self.model)
-            scale = (self.tileSize * self.numCols,
-                     self.tileSize * self.numRows)
-            painter.drawImage(self.xOffset, self.yOffset,
-                              img.scaled(scale[0], scale[1]))
-            EMImageGenerator.drawGrid(painter, self.numCols, self.numRows,
+
+            painter.drawImage(0, 0,
+                              img.scaled(self.width, self.height))
+            EMImageGenerator.drawGrid(painter, nc, nr,
                                       self.xOffset, self.yOffset,
                                       self.tileSize)
 
-            index = 1
-            for note in self.model.getMapNotes():
-                np = note.getPos()
-                note.drawNoteIcon(painter, np[0]-12, np[1]-12, 25, index)
-                index += 1
-
-            # painter.setBrush(Qt.black)
-            # painter.setPen(Qt.black)
-            # painter.drawRect(0, 0, self.width, self.height)
-            # grid = self.model.getTileGrid()
-            # for y in range(self.model.getNumRows()):
-            #     for x in range(self.model.getNumCols()):
-            #         tile = grid[y][x]
-            #         if tile[0] == -1:
-            #             # Draw empty tile
-            #             self.drawEmptyTile(painter, x, y)
-            #         else:
-            #             if tile[0] not in self.modelList:
-            #                 self.drawErrorTile(painter, x, y)
-            #             else:
-            #                 cachedTM = self.modelList[tile[0]]
-            #                 if cachedTM is None:
-            #                     # Draw error tile
-            #                     self.drawErrorTile(painter, x, y)
-            #                 else:
-            #                     # draw actual tile
-            #                     self.drawTile(painter, x, y, cachedTM,
-            #                                   (tile[1], tile[2], tile[3]))
-            # if self.mouseIndex != (-1, -1) and not self.mousePressed:
-            #     if self.openTab == 0 and self.selectedObject[0] != -1:
-            #         self.drawPreviewTileSingle(painter)
-            #     elif self.openTab == 1 and self.selectedObject[1] != -1:
-            #         self.drawPreviewTileGroup(painter)
             if self.mouseIndex != (-1, -1) and not self.mousePressed:
                 if self.openTab == 0 and self.selectedObject[0] != -1:
                     self.drawPreviewTileSingle(painter)
@@ -430,8 +402,6 @@ class MapEditorGraphics(EMModelGraphics):
 
 
 def main():
-
-    # doMath()
     app = QApplication([])
 
     mainWidget = MapEditor()

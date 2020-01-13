@@ -340,6 +340,17 @@ class EMModelGraphics(QWidget):
         return (self.sOptions[0], self.sOptions[1],
                 self.sOptions[2])
 
+    def calculateSize(self):
+        # TODO: Calculate scale as well in Future
+        self.width = (self.model.getNumCols() * self.tileSize)
+        self.height = (self.model.getNumRows() * self.tileSize)
+        self.xOffset = 0
+        self.yOffset = 0
+        self.setMinimumWidth(self.width)
+        self.setMinimumHeight(self.height)
+        self.setMaximumWidth(self.width)
+        self.setMaximumHeight(self.height)
+
     def calculateOffsets(self):
         self.xOffset = (self.width - self.numCols*self.tileSize)/2
         self.yOffset = (self.height - self.numRows*self.tileSize)/2
@@ -401,7 +412,8 @@ class EMModelGraphics(QWidget):
             return (-1, -1)
         index = (mPoint.x() - self.xOffset, mPoint.y() - self.yOffset)
         index = (int(index[0]/self.tileSize), int(index[1]/self.tileSize))
-        if index[0] >= self.numCols or index[1] >= self.numRows:
+        if (index[0] >= self.model.getNumCols()
+                or index[1] >= self.model.getNumRows()):
             return (-1, -1)
         return index
 
