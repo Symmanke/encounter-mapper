@@ -383,6 +383,8 @@ class EMImageGenerator():
             painter = QPainter(genImage)
             cls.drawTile(painter, model)
             if "transformOptions" in displayOptions:
+                print("There are options!")
+                print(displayOptions["transformOptions"])
                 cls.drawTile(painter, model, 0, 0,
                              displayOptions["transformOptions"])
             if "drawGrid" in displayOptions:

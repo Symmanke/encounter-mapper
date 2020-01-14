@@ -220,6 +220,7 @@ class MapEditorGraphics(EMModelGraphics):
         super(MapEditorGraphics, self).__init__(
             model, model.getNumRows(), model.getNumCols())
         self.openTab = 0
+        self.selectedModelImages = [None, None]
         self.selectedGroup = None
         # Need for later, when I introduce objects (unless I decide to make)
         # everything grid based instead for simplicity's sake
@@ -255,6 +256,14 @@ class MapEditorGraphics(EMModelGraphics):
             else:
                 self.selectedGroup = GroupModel.createModelTransform(
                     group, self.sOptions)
+        if self.selectedGroup is not None:
+            self.selectedModelImages[1] = EMImageGenerator.genImageFromModel(
+                self.selectedGroup)
+        if self.selectedObject[0] is not None:
+            self.selectedModelImages[0] = EMImageGenerator.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TileName,
+                                        self.selectedObject[0]),
+                {"transformOptions": self.sOptions})
 
     def indexAlignedGroup(self):
         midIndex = (max(0, self.mouseIndex[0] -
@@ -282,6 +291,11 @@ class MapEditorGraphics(EMModelGraphics):
             self.sOptions[2] = not self.sOptions[2]
         if self.selectedObject[1] != -1:
             self.updateSelectedObject(self.selectedObject[1], 1)
+        if self.selectedObject[0] != -1:
+            self.selectedModelImages[0] = EMImageGenerator.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TileName,
+                                        self.selectedObject[0]),
+                {"transformOptions": self.sOptions})
         self.updatePreview.emit()
 
     def paintEvent(self, paintEvent):
@@ -312,33 +326,42 @@ class MapEditorGraphics(EMModelGraphics):
                 index += 1
 
     def drawPreviewTileSingle(self, painter):
-        if self.selectedObject[0] not in self.modelList:
-            self.updateModelList(self.selectedObject[0])
-        # draw single object
-        model = self.modelList[self.selectedObject[0]]
-        img = EMImageGenerator.genImageFromModel(model)
-        point = (int(self.xOffset + (self.tileSize * self.mouseIndex[0])),
-                 int(self.yOffset + (self.tileSize * self.mouseIndex[1])))
-        painter.drawImage(point[0], point[1],
-                          img.scaled(self.tileSize, self.tileSize))
+        if self.selectedModelImages[0] is not None:
+            point = (int(self.xOffset + (self.tileSize * self.mouseIndex[0])),
+                     int(self.yOffset + (self.tileSize * self.mouseIndex[1])))
+            painter.drawImage(point[0], point[1],
+                              self.selectedModelImages[0].scaled(
+                self.tileSize, self.tileSize))
+
+        # if self.selectedObject[0] not in self.modelList:
+        #     self.updateModelList(self.selectedObject[0])
+        # # draw single object
+        # model = self.modelList[self.selectedObject[0]]
+        # img = EMImageGenerator.genImageFromModel(model)
+        # point = (int(self.xOffset + (self.tileSize * self.mouseIndex[0])),
+        #          int(self.yOffset + (self.tileSize * self.mouseIndex[1])))
+        # painter.drawImage(point[0], point[1],
+        #                   img.scaled(self.tileSize, self.tileSize))
 
         EMImageGenerator.drawGrid(
             painter, 1, 1, point[0], point[1],
             self.tileSize, Qt.red)
 
     def drawPreviewTileGroup(self, painter):
-        model = self.selectedGroup
-        groupIndex = self.indexAlignedGroup()
-        point = (int(self.xOffset + (self.tileSize * groupIndex[0])),
-                 int(self.yOffset + (self.tileSize * groupIndex[1])))
-        img = EMImageGenerator.genImageFromModel(self.selectedGroup)
-        painter.drawImage(point[0], point[1],
-                          img.scaled(self.tileSize * model.getNumCols(),
-                                     self.tileSize * model.getNumRows()))
+        if self.selectedModelImages[1] is not None:
+            model = self.selectedGroup
+            groupIndex = self.indexAlignedGroup()
+            point = (int(self.xOffset + (self.tileSize * groupIndex[0])),
+                     int(self.yOffset + (self.tileSize * groupIndex[1])))
 
-        EMImageGenerator.drawGrid(
-            painter, model.getNumCols(), model.getNumRows(),
-            point[0], point[1], self.tileSize, Qt.red)
+            painter.drawImage(point[0], point[1],
+                              self.selectedModelImages[1].scaled(
+                              self.tileSize * model.getNumCols(),
+                              self.tileSize * model.getNumRows()))
+
+            EMImageGenerator.drawGrid(
+                painter, model.getNumCols(), model.getNumRows(),
+                point[0], point[1], self.tileSize, Qt.red)
 
     def keyPressEvent(self, event):
         if self.preview:
