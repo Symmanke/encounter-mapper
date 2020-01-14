@@ -22,6 +22,7 @@ If not, see <https://www.gnu.org/licenses/>.
 from PyQt5.QtWidgets import (QApplication, QStackedWidget, QFileDialog,
                              QLabel, QPushButton, QVBoxLayout,
                              QWidget, QMainWindow, QAction)
+from PyQt5.QtGui import QPixmap
 
 # from EMMapWidget import EMMapWidget
 from EMMapEditor import MapEditor
@@ -89,8 +90,10 @@ class EMMain(QMainWindow):
         new.clicked.connect(self.newEncounter)
         open = QPushButton("Open Encounter")
         open.clicked.connect(self.openEncounter)
+        imageLabel = QLabel()
+        imageLabel.setPixmap(QPixmap("res/Title.png").scaled(972, 540))
 
-        layout.addWidget(QLabel("Welcome To Encounter Mapper"))
+        layout.addWidget(imageLabel)
         layout.addWidget(new)
         layout.addWidget(open)
         widget.setLayout(layout)
@@ -102,8 +105,9 @@ class EMMain(QMainWindow):
         self.setWindowTitle("untitled*")
 
     def openEncounter(self):
-        pathToOpen = QFileDialog.getOpenFileName()
-        if pathToOpen is not None:
+        pathToOpen = QFileDialog.getOpenFileName(self, 'Open File',
+                                                 '', "Encounter Map (*.emap)")
+        if pathToOpen is not None and pathToOpen[0]:
             self.model = ModelManager.loadModelFromFile(pathToOpen[0],
                                                         MapModel)
             if self.model is not None:
@@ -112,7 +116,8 @@ class EMMain(QMainWindow):
                 self.editStack.setCurrentIndex(1)
 
     def saveAsEncounter(self):
-        filePath = QFileDialog.getSaveFileName()
+        filePath = QFileDialog.getSaveFileName(self, 'Save File',
+                                               '', "Encounter Map (*.emap)")
         if filePath is not None:
             self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()
@@ -123,7 +128,8 @@ class EMMain(QMainWindow):
         pass
 
     def exportEncounterMap(self):
-        filePath = QFileDialog.getSaveFileName()
+        filePath = QFileDialog.getSaveFileName(self, "Open Encounter",
+                                               "", "Image (*.png)")
         if filePath is not None:
             # self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()

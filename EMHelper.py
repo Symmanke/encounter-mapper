@@ -102,8 +102,16 @@ class ModelManager():
         f = open(path, "r")
         if f.mode == "r":
             contents = f.read()
-            jsContents = json.loads(contents)
+            jsContents = None
+            try:
+                jsContents = json.loads(contents)
+            except Exception:
+                # using the base exception class for now
+                # Send an alert that the JSON contents cannot be read
+                pass
             f.close()
+            if jsContents is None:
+                return None
 
             return classType.createModelJS(jsContents)
         return None
