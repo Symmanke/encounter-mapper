@@ -19,14 +19,14 @@ along with Encounter Mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from PyQt5.QtWidgets import (QApplication, QLabel,
+from PyQt5.QtWidgets import (QApplication, QLabel, QScrollArea,
                              QGridLayout, QTabWidget, QWidget, QPushButton)
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPalette
 
 from EMTileEditor import TileEditor, TilePreviewWidget
 from EMModel import TileModel, GroupModel, MapModel
-from EMHelper import ModelManager
+from EMHelper import ModelManager, EMImageGenerator
 from EMGroupEditor import GroupEditor, GroupPreview
 from EMBaseClasses import EMModelGraphics, EMModelPicker
 from EMNotesTab import NotesTab
@@ -45,11 +45,23 @@ class MapEditor(QWidget):
         layout = QGridLayout()
         # Create a tab widget
         self.model = MapModel() if model is None else model
+        self.model.modelUpdated.connect(self.updateUI)
+
         self.pressedItem = None
         self.filePathOfModel = None
+
         self.mapEditGraphics = MapEditorGraphics(self.model)
         self.mapEditGraphics.updatePreview.connect(self.updateUI)
         self.mapEditGraphics.selectedItem.connect(self.updateSelection)
+
+        # Add Scrollable area for groupPreview
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setWidget(self.mapEditGraphics)
+        self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setAlignment(Qt.AlignCenter)
+        self.scrollArea.setMinimumWidth(500)
+        self.scrollArea.setMinimumHeight(500)
+
         self.tabWidget = QTabWidget()
         self.tabWidget.currentChanged.connect(
             self.mapEditGraphics.updateSelectedTab)
@@ -91,11 +103,6 @@ class MapEditor(QWidget):
         self.delColBtn = QPushButton("Del Col")
         self.delColBtn.clicked.connect(self.delGroupCol)
 
-        self.addRowBtn.setEnabled(False)
-        self.delRowBtn.setEnabled(False)
-        self.addColBtn.setEnabled(False)
-        self.delColBtn.setEnabled(False)
-
         btnLayout.addWidget(self.cwBtn, 0, 0)
         btnLayout.addWidget(self.ccwBtn, 1, 0)
         btnLayout.addWidget(self.hfBtn, 0, 1)
@@ -106,7 +113,7 @@ class MapEditor(QWidget):
         btnLayout.addWidget(self.delColBtn, 1, 3)
         self.btnGroup.setLayout(btnLayout)
 
-        layout.addWidget(self.mapEditGraphics, 0, 0)
+        layout.addWidget(self.scrollArea, 0, 0)
         layout.addWidget(self.tabWidget, 0, 1, 2, 1)
         layout.addWidget(self.btnGroup, 1, 0)
         self.setLayout(layout)
@@ -196,6 +203,7 @@ class MapEditor(QWidget):
         # self.modelNameEdit.setText(self.model.getName())
         # update the preview
         # self.mapEditGraphics.calculateOffsets()
+        self.mapEditGraphics.calculateSize()
         self.mapEditGraphics.repaint()
 
 
@@ -212,11 +220,21 @@ class MapEditorGraphics(EMModelGraphics):
         super(MapEditorGraphics, self).__init__(
             model, model.getNumRows(), model.getNumCols())
         self.openTab = 0
+        self.selectedModelImages = [None, None]
         self.selectedGroup = None
         # Need for later, when I introduce objects (unless I decide to make)
         # everything grid based instead for simplicity's sake
         self.mousePosition = (-1, -1)
         self.pressedItem = None
+
+        self.keyBindings = {
+            Qt.Key_R: (self.transformS, "cw"),
+            Qt.Key_R | Qt.ShiftModifier: (self.transformS, "ccw"),
+            Qt.Key_F: (self.transformS, "h"),
+            Qt.Key_F | Qt.ShiftModifier: (self.transformS, "v"),
+            Qt.Key_0: (self.updateZoom, 5),
+            Qt.Key_Minus: (self.updateZoom, -5),
+        }
 
     def setModel(self, model):
         self.model = model
@@ -238,6 +256,14 @@ class MapEditorGraphics(EMModelGraphics):
             else:
                 self.selectedGroup = GroupModel.createModelTransform(
                     group, self.sOptions)
+        if self.selectedGroup is not None:
+            self.selectedModelImages[1] = EMImageGenerator.genImageFromModel(
+                self.selectedGroup)
+        if self.selectedObject[0] is not None:
+            self.selectedModelImages[0] = EMImageGenerator.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TileName,
+                                        self.selectedObject[0]),
+                {"transformOptions": self.sOptions})
 
     def indexAlignedGroup(self):
         midIndex = (max(0, self.mouseIndex[0] -
@@ -263,43 +289,35 @@ class MapEditorGraphics(EMModelGraphics):
             self.sOptions[1] = not self.sOptions[1]
         elif type == "v":
             self.sOptions[2] = not self.sOptions[2]
-        print("--Options Updated--")
-        print(self.sOptions)
-        print(self.selectedObject)
         if self.selectedObject[1] != -1:
             self.updateSelectedObject(self.selectedObject[1], 1)
+        if self.selectedObject[0] != -1:
+            self.selectedModelImages[0] = EMImageGenerator.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TileName,
+                                        self.selectedObject[0]),
+                {"transformOptions": self.sOptions})
         self.updatePreview.emit()
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if(self.model is not None):
-            painter.setBrush(Qt.black)
-            painter.setPen(Qt.black)
-            painter.drawRect(0, 0, self.width, self.height)
-            grid = self.model.getTileGrid()
-            for y in range(self.model.getNumRows()):
-                for x in range(self.model.getNumCols()):
-                    tile = grid[y][x]
-                    if tile[0] == -1:
-                        # Draw empty tile
-                        self.drawEmptyTile(painter, x, y)
-                    else:
-                        if tile[0] not in self.modelList:
-                            self.drawErrorTile(painter, x, y)
-                        else:
-                            cachedTM = self.modelList[tile[0]]
-                            if cachedTM is None:
-                                # Draw error tile
-                                self.drawErrorTile(painter, x, y)
-                            else:
-                                # draw actual tile
-                                self.drawTile(painter, x, y, cachedTM,
-                                              (tile[1], tile[2], tile[3]))
+            nr = self.model.getNumRows()
+            nc = self.model.getNumCols()
+
+            img = EMImageGenerator.genImageFromModel(self.model)
+
+            painter.drawImage(0, 0,
+                              img.scaled(self.width, self.height))
+            EMImageGenerator.drawGrid(painter, nc, nr,
+                                      self.xOffset, self.yOffset,
+                                      self.tileSize)
+
             if self.mouseIndex != (-1, -1) and not self.mousePressed:
                 if self.openTab == 0 and self.selectedObject[0] != -1:
                     self.drawPreviewTileSingle(painter)
                 elif self.openTab == 1 and self.selectedObject[1] != -1:
                     self.drawPreviewTileGroup(painter)
+
             # Draw the notes
             index = 1
             for note in self.model.getMapNotes():
@@ -308,40 +326,52 @@ class MapEditorGraphics(EMModelGraphics):
                 index += 1
 
     def drawPreviewTileSingle(self, painter):
-        if self.selectedObject[0] not in self.modelList:
-            self.updateModelList(self.selectedObject[0])
-        # draw single object
-        model = self.modelList[self.selectedObject[0]]
-        print(self.selectedObject[0])
-        self.drawTile(
-            painter, self.mouseIndex[0],
-            self.mouseIndex[1], model, self.sOptions, True)
+        if self.selectedModelImages[0] is not None:
+            point = (int(self.xOffset + (self.tileSize * self.mouseIndex[0])),
+                     int(self.yOffset + (self.tileSize * self.mouseIndex[1])))
+            painter.drawImage(point[0], point[1],
+                              self.selectedModelImages[0].scaled(
+                self.tileSize, self.tileSize))
+
+        # if self.selectedObject[0] not in self.modelList:
+        #     self.updateModelList(self.selectedObject[0])
+        # # draw single object
+        # model = self.modelList[self.selectedObject[0]]
+        # img = EMImageGenerator.genImageFromModel(model)
+        # point = (int(self.xOffset + (self.tileSize * self.mouseIndex[0])),
+        #          int(self.yOffset + (self.tileSize * self.mouseIndex[1])))
+        # painter.drawImage(point[0], point[1],
+        #                   img.scaled(self.tileSize, self.tileSize))
+
+        EMImageGenerator.drawGrid(
+            painter, 1, 1, point[0], point[1],
+            self.tileSize, Qt.red)
 
     def drawPreviewTileGroup(self, painter):
-        tGrid = self.selectedGroup.getTileGrid()
-        groupIndex = self.indexAlignedGroup()
-        for y in range(len(tGrid)):
-            for x in range(len(tGrid[y])):
-                tile = tGrid[y][x]
-                if(tile[0] > 0):
-                    if tile[0] not in self.modelList:
-                        self.updateModelList(tile[0])
-                    # draw single object
-                    model = self.modelList[tile[0]]
-                    self.drawTile(
-                        painter, groupIndex[0] + x,
-                        groupIndex[1] + y, model,
-                        (tile[1], tile[2], tile[3]), True)
+        if self.selectedModelImages[1] is not None:
+            model = self.selectedGroup
+            groupIndex = self.indexAlignedGroup()
+            point = (int(self.xOffset + (self.tileSize * groupIndex[0])),
+                     int(self.yOffset + (self.tileSize * groupIndex[1])))
 
-        # def keyPressEvent(self, event):
-        #     if self.preview:
-        #         event.ignore()
-        #     else:
-        #         key = event.key() | int(event.modifiers())
-        #         if key in self.keyBindings:
-        #             command = self.keyBindings[key]
-        #             command[0](command[1])
-        #
+            painter.drawImage(point[0], point[1],
+                              self.selectedModelImages[1].scaled(
+                              self.tileSize * model.getNumCols(),
+                              self.tileSize * model.getNumRows()))
+
+            EMImageGenerator.drawGrid(
+                painter, model.getNumCols(), model.getNumRows(),
+                point[0], point[1], self.tileSize, Qt.red)
+
+    def keyPressEvent(self, event):
+        if self.preview:
+            event.ignore()
+        else:
+            key = event.key() | int(event.modifiers())
+            if key in self.keyBindings:
+                command = self.keyBindings[key]
+                command[0](command[1])
+
     def mousePressEvent(self, QMouseEvent):
         if self.preview:
             QMouseEvent.ignore()
@@ -357,7 +387,6 @@ class MapEditorGraphics(EMModelGraphics):
                             self.mouseIndex[0], self.mouseIndex[1], tile)
                         self.repaint()
                     elif self.openTab == 1 and self.selectedObject[1] != -1:
-                        print("Adding...")
                         groupIndex = self.indexAlignedGroup()
                         gGrid = self.selectedGroup.getTileGrid()
                         for y in range(self.selectedGroup.getNumRows()):
@@ -374,16 +403,10 @@ class MapEditorGraphics(EMModelGraphics):
                         notes = self.model.getMapNotes()
                         for i in range(len(notes)):
                             note = notes[i]
-                            print("{}, {} -> {}".format(
-                                mp, note.getPos(), self.distanceHelper(
-                                    mp, note.getPos())))
                             if self.distanceHelper(mp, note.getPos()) <= 1000:
-                                print("Bingo!")
                                 self.pressedItem = (3, note)
                                 self.selectedItem.emit(3, i+1)
                                 break
-
-                                # perform stuff
 
     def mouseMoveEvent(self, QMouseEvent):
         if self.preview:
@@ -420,8 +443,6 @@ class MapEditorGraphics(EMModelGraphics):
 
 
 def main():
-
-    # doMath()
     app = QApplication([])
 
     mainWidget = MapEditor()

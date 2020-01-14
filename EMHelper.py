@@ -19,7 +19,9 @@ along with Encounter Mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from EMModel import TileModel
+from EMModel import TileModel, GroupModel, MapModel
+from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform, QPen
+from PyQt5.QtCore import Qt
 
 import json
 
@@ -100,8 +102,16 @@ class ModelManager():
         f = open(path, "r")
         if f.mode == "r":
             contents = f.read()
-            jsContents = json.loads(contents)
+            jsContents = None
+            try:
+                jsContents = json.loads(contents)
+            except Exception:
+                # using the base exception class for now
+                # Send an alert that the JSON contents cannot be read
+                pass
             f.close()
+            if jsContents is None:
+                return None
 
             return classType.createModelJS(jsContents)
         return None
@@ -123,6 +133,12 @@ class ModelManager():
         f = open(path+ext, "w+")
         f.write(text)
         f.close()
+
+    @classmethod
+    def saveImageToFile(cls, img, path):
+        # f = open(path+".png", "w+")
+        img.save(path+".png", "PNG")
+        # f.close()
 
     @classmethod
     def createCache(cls, name):
@@ -327,3 +343,167 @@ class ModelManager():
             cls.tileModels.insert(index, model)
         cls.tileModelsByID[model.getUid()] = model
         cls.saveTiles()
+
+
+class EMImageGenerator():
+    """
+    Helper class for generating the images used to display the tileMap.
+
+    Rather than always passing inheritance, I am planning on using the Helper
+    class instead. This can be used in a variety of scenarios, but also assist
+    with creating images to save.
+
+    images generated will default to 72ppi, with 3 in. Tiles (216p per tile).
+    This happen to be the dimensions I use for my own custom tiles, and makes
+    things easier for my personal use. In the future, I plan to allow this to
+    be customized, although some user-created custom images may be required
+    at that time. hello there
+    """
+
+    textureCache = {}
+
+    GridPatternExport = (5, 3, 3)
+    GridPatternStandard = (3, 1, 1)
+    GridPatternPreviewSimple = (2,)
+    GridPatternPreview = (2, 1, 1)
+
+    @classmethod
+    def genImageFromModel(cls, model, displayOptions=None):
+        displayOptions = [] if displayOptions is None else displayOptions
+        genImage = None
+        if isinstance(model, MapModel):
+            genImage = QImage(216 * model.getNumCols(),
+                              216 * model.getNumRows(),
+                              QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            cls.drawTileGroup(painter, model)
+            if "drawGrid" in displayOptions:
+                cls.drawGrid(painter, model.getNumCols(), model.getNumRows(),
+                             0, 0, 216, Qt.black, cls.GridPatternExport)
+        elif isinstance(model, GroupModel):
+            genImage = QImage(216 * model.getNumCols(),
+                              216 * model.getNumRows(),
+                              QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            cls.drawTileGroup(painter, model)
+        elif isinstance(model, TileModel):
+            genImage = QImage(216, 216, QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            cls.drawTile(painter, model)
+            if "transformOptions" in displayOptions:
+                print("There are options!")
+                print(displayOptions["transformOptions"])
+                cls.drawTile(painter, model, 0, 0,
+                             displayOptions["transformOptions"])
+            if "drawGrid" in displayOptions:
+                cls.drawGrid(painter, 1, 1)
+        else:
+            print("Wrong Model")
+        return genImage
+
+    def updateModelImage(cls, model, x, y, x2=-1, y2=-1, pointArr=None):
+        pass
+
+    @classmethod
+    def drawTileGroup(cls, painter, model):
+        cachedTiles = {}
+        grid = model.getTileGrid()
+        for y in range(model.getNumRows()):
+            for x in range(model.getNumCols()):
+                tile = grid[y][x]
+                if tile[0] == -1:
+                    # draw Empty Tile
+                    cls.drawEmptyTile(painter, x, y)
+                    pass
+                else:
+                    if tile[0] not in cachedTiles:
+                        cachedTiles[tile[0]] = ModelManager.fetchByUid(
+                            ModelManager.TileName, tile[0])
+                    tileModel = cachedTiles[tile[0]]
+                    if tileModel is not None:
+                        cls.drawTile(painter, tileModel, x, y,
+                                     (tile[1], tile[2], tile[3]))
+                    else:
+                        # Draw error Tile
+                        pass
+
+        pass
+
+    @classmethod
+    def drawTile(cls, painter, model, xind=0, yind=0,
+                 options=(0, False, False)):
+        # Res = 3 in. at 72ppi. 72*3 = 216
+        res = 216
+        bg = model.getBgColor()
+        painter.setPen(bg)
+        painter.setBrush(bg)
+        painter.drawRect(int(res * xind),
+                         int(res * yind),
+                         res, res)
+        # if bgTexture != "None":
+        # Add Background texture
+        txtName = model.getBgTexture()
+        if txtName != "None":
+            if txtName not in cls.textureCache:
+                # Attempt to load texture
+                cls.loadTexture(txtName)
+            texture = cls.textureCache[txtName]
+            if texture is not None:
+                painter.drawImage(res*xind, res*yind, texture,
+                                  res*(xind % 3), res*(yind % 3), 216, 216)
+        points = model.generatePointOffset(
+            xind, yind, res,
+            0, 0,
+            options[0], options[1], options[2])
+        fg = model.getFgColor()
+        painter.setBrush(fg)
+        painter.setPen(fg)
+        poly = QPolygon(points)
+        painter.drawPolygon(poly)
+
+    @classmethod
+    def drawEmptyTile(cls, painter, xInd, yInd):
+        painter.setPen(Qt.black)
+        painter.setBrush(Qt.white)
+        painter.drawRect(xInd * 216, yInd * 216, 216, 216)
+
+    @classmethod
+    def drawGrid(cls, painter, nc, nr, xoff=0, yoff=0,
+                 tileSize=216, penColor=None, gp=None, lpt=3):
+        pattern = cls.GridPatternStandard if gp is None else gp
+        pc = Qt.black if penColor is None else penColor
+        painter.setPen(pc)
+        xLen = tileSize * nc
+        yLen = tileSize * nr
+        dist = tileSize/lpt
+        # print(pattern)
+        patternLen = len(pattern)
+        for x in range((lpt*nc)+1):
+            painter.setPen(QPen(pc, pattern[x % patternLen]))
+            xd = int(x*dist)
+            painter.drawLine(xd+xoff, yoff, xd + xoff, yLen + yoff)
+        for y in range((lpt*nr)+1):
+            painter.setPen(QPen(pc, pattern[y % patternLen]))
+            yd = int(y*dist)
+            painter.drawLine(xoff, yd + yoff, xLen + xoff, yd + yoff)
+
+    @classmethod
+    def transformImage(cls, img, options=(0, False, False)):
+        tImage = img
+        tImage = tImage.mirrored(options[1], options[2])
+        tImage = tImage.transformed(QTransform().rotate(
+            (90*options[0]) % 360))
+        return tImage
+
+    @classmethod
+    def loadTexture(cls, txtName):
+        texture = QImage()
+        if texture.load("res/bg_{}.png".format(txtName.lower()), "PNG"):
+            cls.textureCache[txtName] = texture
+            print("successful Load!")
+            return True
+        else:
+            # include None to prevent multiple loads
+            cls.textureCache[txtName] = None
+            print("WARNING: {} not able to be loaded".format(txtName))
+            return False

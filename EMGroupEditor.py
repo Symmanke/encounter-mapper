@@ -20,14 +20,14 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from PyQt5.QtCore import (Qt, pyqtSignal)
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPalette
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
-                             QPushButton, QWidget)
+                             QPushButton, QWidget, QScrollArea)
 
 # from EMTilePicker import TilePicker
 from EMModel import GroupModel, TileModel
 from EMTileEditor import TileEditor, TilePreviewWidget
-from EMHelper import ModelManager
+from EMHelper import ModelManager, EMImageGenerator
 from EMBaseClasses import EMModelEditor, EMModelGraphics, EMModelPicker
 
 
@@ -48,6 +48,15 @@ class GroupEditor(EMModelEditor):
 
         self.groupPreview = GroupPreview(self.model)
         self.groupPreview.updatePreview.connect(self.updateUI)
+
+        # Add Scrollable area for groupPreview
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setWidget(self.groupPreview)
+        self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setAlignment(Qt.AlignCenter)
+        self.scrollArea.setMinimumWidth(500)
+        self.scrollArea.setMinimumHeight(500)
+
         self.tilePicker = EMModelPicker(ModelManager.TileName, TileModel,
                                         TileEditor, TilePreviewWidget)
         self.tilePicker.selectedModel.connect(self.groupPreview.setPTile)
@@ -93,11 +102,13 @@ class GroupEditor(EMModelEditor):
 
         layout = QGridLayout()
         layout.addWidget(titleGroup, 0, 0)
-        layout.addWidget(self.groupPreview, 1, 0)
+        layout.addWidget(self.scrollArea, 1, 0)
         layout.addWidget(self.tilePicker, 0, 1, 3, 1)
         layout.addWidget(self.btnGroup, 2, 0)
         layout.addWidget(bottomGroup, 3, 0, 1, 2)
         self.setLayout(layout)
+
+        self.pTileImage = None
 
         self.updateUI()
 
@@ -137,7 +148,7 @@ class GroupEditor(EMModelEditor):
         self.btnGroup.repaint()
         self.modelNameEdit.setText(self.model.getName())
         # update the preview
-        self.groupPreview.calculateOffsets()
+        self.groupPreview.calculateSize()
         self.groupPreview.repaint()
 
 
@@ -160,8 +171,9 @@ class GroupPreview(EMModelGraphics):
             Qt.Key_R: (self.transformP, "cw"),
             Qt.Key_R | Qt.ShiftModifier: (self.transformP, "ccw"),
             Qt.Key_F: (self.transformP, "h"),
-            Qt.Key_F | Qt.ShiftModifier: (self.transformP, "v")
-
+            Qt.Key_F | Qt.ShiftModifier: (self.transformP, "v"),
+            Qt.Key_0: (self.updateZoom, 5),
+            Qt.Key_Minus: (self.updateZoom, -5),
         }
 
     @classmethod
@@ -171,8 +183,10 @@ class GroupPreview(EMModelGraphics):
         return cls(model, tileSize, 50, 50, True)
 
     def setPTile(self, tileId):
-        print(tileId)
         self.selectedObject[0] = tileId
+        self.pTileImage = EMImageGenerator.genImageFromModel(
+            ModelManager.fetchByUid(ModelManager.TileName, tileId),
+            {"transformOptions": self.sOptions})
         self.updateModelList(tileId)
 
     def transformP(self, type):
@@ -184,6 +198,11 @@ class GroupPreview(EMModelGraphics):
             self.sOptions[1] = not self.sOptions[1]
         elif type == "v":
             self.sOptions[2] = not self.sOptions[2]
+        if self.selectedObject[0] != -1:
+            self.pTileImage = EMImageGenerator.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TileName,
+                                        self.selectedObject[0]),
+                {"transformOptions": self.sOptions})
         self.updatePreview.emit()
 
     def removeTileCache(self, id):
@@ -194,36 +213,37 @@ class GroupPreview(EMModelGraphics):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if(self.model is not None):
-            bgColor = Qt.white if self.preview else Qt.black
-            painter.setBrush(bgColor)
-            painter.setPen(bgColor)
-            painter.drawRect(0, 0, self.width, self.height)
-            grid = self.model.getTileGrid()
-            for y in range(self.model.getNumRows()):
-                for x in range(self.model.getNumCols()):
-                    tile = grid[y][x]
-                    if tile[0] == -1:
-                        # Draw empty tile
-                        self.drawEmptyTile(painter, x, y)
-                    else:
-                        if tile[0] not in self.modelList:
-                            self.drawErrorTile(painter, x, y)
-                        else:
-                            cachedTM = self.modelList[tile[0]]
-                            if cachedTM is None:
-                                # Draw error tile
-                                self.drawErrorTile(painter, x, y)
-                            else:
-                                # draw actual tile
-                                self.drawTile(painter, x, y, cachedTM,
-                                              (tile[1], tile[2], tile[3]))
+            nr = self.model.getNumRows()
+            nc = self.model.getNumCols()
+
+            img = EMImageGenerator.genImageFromModel(self.model)
+            painter.drawImage(0, 0, img.scaled(self.width, self.height))
+            if self.preview:
+                EMImageGenerator.drawGrid(
+                    painter, nc, nr, self.xOffset,
+                    self.yOffset, self.tileSize, Qt.black,
+                    EMImageGenerator.GridPatternPreviewSimple, 1)
+            else:
+                EMImageGenerator.drawGrid(painter, nc, nr,
+                                          self.xOffset, self.yOffset,
+                                          self.tileSize)
+
+            # draw preview Image
             if not self.preview:
                 if self.mouseIndex != (-1, -1) and not self.mousePressed:
-                    if self.selectedObject[0] in self.modelList:
-                        model = self.modelList[self.selectedObject[0]]
-                        self.drawTile(
-                            painter, self.mouseIndex[0], self.mouseIndex[1],
-                            model, self.sOptions, True)
+                    if (self.selectedObject[0] != -1
+                            and self.pTileImage is not None):
+                        tp = (int(self.xOffset +
+                                  (self.mouseIndex[0] * self.tileSize)),
+                              int(self.yOffset +
+                                  (self.mouseIndex[1] * self.tileSize)))
+                        painter.drawImage(
+                            tp[0], tp[1],
+                            self.pTileImage.scaled(
+                                self.tileSize, self.tileSize))
+                        EMImageGenerator.drawGrid(
+                            painter, 1, 1, tp[0], tp[1],
+                            self.tileSize, Qt.red)
 
     def keyPressEvent(self, event):
         if self.preview:

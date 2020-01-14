@@ -204,7 +204,7 @@ class ModelPickerListItem(QWidget):
             layout = QHBoxLayout()
             self.preview = previewClass.previewWidget(self.model)
             layout.addWidget(self.preview)
-            layout.addWidget(QLabel(self.model.getName()))
+            layout.addWidget(QLabel(self.model.getPreviewName()))
             self.setLayout(layout)
 
 
@@ -294,6 +294,7 @@ class EMModelGraphics(QWidget):
                  tileSize=100, width=500, height=500,
                  preview=False, cached=False, sOptions=None):
         super(EMModelGraphics, self).__init__()
+        self.zPercent = 50
         self.model = model
         self.numRows = rows
         self.numCols = cols
@@ -307,6 +308,7 @@ class EMModelGraphics(QWidget):
         self.modelList = {}
         self.mouseIndex = (-1, -1)
         self.mousePressed = False
+        self.modelImage = None
         if cached:
             self.createModelList()
 
@@ -332,9 +334,36 @@ class EMModelGraphics(QWidget):
             self.modelList[id] = ModelManager.fetchByUid(
                 ModelManager.TileName, id)
 
+    def getModelImage(self):
+        return self.modelImage
+
     def getSOptions(self):
         return (self.sOptions[0], self.sOptions[1],
                 self.sOptions[2])
+
+    def getZoomPercentage(self):
+        return self.zPercent
+
+    def updateZoom(self, dz):
+        percent = (min(200, max(25, self.getZoomPercentage() + dz)))
+        self.setZoomPercentage(percent)
+        self.repaint()
+
+    def setZoomPercentage(self, zp):
+        self.zPercent = zp
+        self.tileSize = 216 * (zp/100)
+        self.calculateSize()
+
+    def calculateSize(self):
+        # TODO: Calculate scale as well in Future
+        self.width = (self.model.getNumCols() * self.tileSize)
+        self.height = (self.model.getNumRows() * self.tileSize)
+        self.xOffset = 0
+        self.yOffset = 0
+        self.setMinimumWidth(self.width)
+        self.setMinimumHeight(self.height)
+        self.setMaximumWidth(self.width)
+        self.setMaximumHeight(self.height)
 
     def calculateOffsets(self):
         self.xOffset = (self.width - self.numCols*self.tileSize)/2
@@ -397,7 +426,8 @@ class EMModelGraphics(QWidget):
             return (-1, -1)
         index = (mPoint.x() - self.xOffset, mPoint.y() - self.yOffset)
         index = (int(index[0]/self.tileSize), int(index[1]/self.tileSize))
-        if index[0] >= self.numCols or index[1] >= self.numRows:
+        if (index[0] >= self.model.getNumCols()
+                or index[1] >= self.model.getNumRows()):
             return (-1, -1)
         return index
 
