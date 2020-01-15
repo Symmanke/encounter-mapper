@@ -501,11 +501,11 @@ class MapModel(GroupModel):
         self.modelUpdated.emit()
 
     def jsonObj(self):
-        return [{
+        return {
             "name": self.name,
             "grid": self.tileGrid,
             "ttf": self.tilesToFetch,
             "uid": self.uid,
             "objects": self.mapObjects,
             "notes": self.mapNotes
-        }]
+        }

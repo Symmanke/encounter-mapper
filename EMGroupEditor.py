@@ -253,6 +253,9 @@ class GroupPreview(EMModelGraphics):
             if key in self.keyBindings:
                 command = self.keyBindings[key]
                 command[0](command[1])
+            else:
+                # Ignore event so it can percolate up
+                event.ignore()
 
     def mousePressEvent(self, QMouseEvent):
         if self.preview:

@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (QApplication, QStackedWidget, QFileDialog,
                              QLabel, QPushButton, QVBoxLayout,
                              QWidget, QMainWindow, QAction)
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
 
 # from EMMapWidget import EMMapWidget
 from EMMapEditor import MapEditor
@@ -83,6 +84,14 @@ class EMMain(QMainWindow):
 
         self.setCentralWidget(self.editStack)
 
+        self.keyBindings = {
+            Qt.Key_S | Qt.ControlModifier: (self.saveEncounter,),
+            Qt.Key_S | Qt.ControlModifier | Qt.ShiftModifier:
+            (self.saveAsEncounter,),
+            Qt.Key_N | Qt.ControlModifier: (self.newEncounter,),
+            Qt.Key_O | Qt.ControlModifier: (self.openEncounter,),
+        }
+
     def initialWidget(self):
         widget = QWidget()
         layout = QVBoxLayout()
@@ -99,6 +108,15 @@ class EMMain(QMainWindow):
         widget.setLayout(layout)
 
         return widget
+
+    def keyPressEvent(self, event):
+        key = event.key() | int(event.modifiers())
+        if key in self.keyBindings:
+            command = self.keyBindings[key]
+            if len(command) == 1:
+                command[0]()
+            else:
+                command[0](command[1])
 
     def newEncounter(self):
         self.editStack.setCurrentIndex(1)
@@ -125,7 +143,13 @@ class EMMain(QMainWindow):
             ModelManager.saveJSONToFile(modelJS, filePath[0])
 
     def saveEncounter(self):
-        pass
+        fp = self.mapEditor.getFilePath()
+        if fp is None:
+            self.saveAsEncounter()
+        else:
+            model = self.mapEditor.getModel()
+            modelJS = model.jsonObj()
+            ModelManager.saveJSONToFile(modelJS, fp[0])
 
     def exportEncounterMap(self):
         filePath = QFileDialog.getSaveFileName(self, "Open Encounter",
