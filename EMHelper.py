@@ -262,33 +262,6 @@ class ModelManager():
             pass
 
     @classmethod
-    def loadGroups(cls):
-        """"Todo"""
-
-    @classmethod
-    def savePalette(cls):
-        """"Todo"""
-
-    @classmethod
-    def saveTiles(cls):
-        tileJS = {
-            "tiles": [],
-            "patterns": []
-        }
-        for tm in cls.tileModels:
-            tileJS["tiles"].append(tm.jsonObj())
-
-        # Do fancy stuff to save the tile map
-        text = json.dumps(tileJS)
-        f = open("tiles.json", "w+")
-        f.write(text)
-        f.close()
-
-    @classmethod
-    def saveGroups(cls):
-        """"Todo"""
-
-    @classmethod
     def copyList(cls, list, type):
         copiedList = []
         if type == "tile":
@@ -319,23 +292,11 @@ class ModelManager():
         return None
 
     @classmethod
-    def fetchGroups(cls, keyword=None, searchType=None):
-        """"Todo"""
-
-    @classmethod
-    def updatePalette(cls, model):
-        """Todo"""
-
-    @classmethod
     def updateTile(cls, model):
         if model.getUid() in cls.tileModelsByID:
             mainModel = cls.tileModelsByID[model.getUid()]
             mainModel.updateModel(model)
         cls.saveTiles()
-
-    @classmethod
-    def updateGroup(cls, model):
-        """Todo"""
 
     @classmethod
     def addTile(cls, model, index=-1):

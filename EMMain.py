@@ -132,6 +132,7 @@ class EMMain(QMainWindow):
             if self.model is not None:
 
                 self.mapEditor.setModel(self.model)
+                self.mapEditor.setFilePath(pathToOpen)
                 self.editStack.setCurrentIndex(1)
 
     def saveAsEncounter(self):
