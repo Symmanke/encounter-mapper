@@ -24,6 +24,8 @@ from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform, QPen
 from PyQt5.QtCore import Qt
 
 import json
+import os
+import sys
 
 
 class ModelManager():
@@ -76,8 +78,9 @@ class ModelManager():
     def loadModelListFromFile(cls, name, classType, ext=".json"):
         if name not in cls.loadedModels:
             # fetch data according to filename
+            filePath = cls.resourcePath(name+ext)
             modelList = []
-            f = open(name+ext, "r")
+            f = open(filePath, "r")
             if f.mode == "r":
                 contents = f.read()
                 jsContents = json.loads(contents)
@@ -123,14 +126,14 @@ class ModelManager():
             modelJS.append(model.jsonObj())
 
         text = json.dumps(modelJS)
-        f = open(name+ext, "w+")
+        f = open(cls.resourcePath(name+ext), "w+")
         f.write(text)
         f.close()
 
     @classmethod
     def saveJSONToFile(cls, jsObj,  path, ext=""):
         text = json.dumps(jsObj)
-        f = open(path+ext, "w+")
+        f = open(cls.resourcePath(path+ext), "w+")
         f.write(text)
         f.close()
 
@@ -344,6 +347,14 @@ class ModelManager():
         cls.tileModelsByID[model.getUid()] = model
         cls.saveTiles()
 
+    # Translate asset paths to useable format for PyInstaller
+    # Thanks to https://blog.aaronhktan.com/posts/2018/05/14/pyqt5-pyinstaller-executable
+
+    def resourcePath(relative_path):
+        if hasattr(sys, '_MEIPASS'):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath('.'), relative_path)
+
 
 class EMImageGenerator():
     """
@@ -498,7 +509,8 @@ class EMImageGenerator():
     @classmethod
     def loadTexture(cls, txtName):
         texture = QImage()
-        if texture.load("res/bg_{}.png".format(txtName.lower()), "PNG"):
+        if texture.load(ModelManager.resourcePath(
+                "res/bg_{}.png".format(txtName.lower())), "PNG"):
             cls.textureCache[txtName] = texture
             print("successful Load!")
             return True

@@ -100,7 +100,8 @@ class EMMain(QMainWindow):
         open = QPushButton("Open Encounter")
         open.clicked.connect(self.openEncounter)
         imageLabel = QLabel()
-        imageLabel.setPixmap(QPixmap("res/Title.png").scaled(972, 540))
+        imageLabel.setPixmap(QPixmap(
+            ModelManager.resourcePath("res/Title.png")).scaled(972, 540))
 
         layout.addWidget(imageLabel)
         layout.addWidget(new)
