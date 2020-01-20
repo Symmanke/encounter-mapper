@@ -24,8 +24,9 @@ from PyQt5.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QListWidget,
                              QVBoxLayout, QComboBox, QDialog)
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPixmap
 from EMBaseClasses import EMEditor
+from EMHelper import ModelManager
 
 
 class NotesTab(QWidget):
@@ -223,7 +224,7 @@ class NoteEditor(EMEditor):
         return self.note
 
 
-class NoteBadge(QWidget):
+class NoteBadge(QLabel):
     """
     Note badge is a graphical represenation of the note on the map and
     elsewhere. It will contain an image representing the different types
@@ -232,6 +233,9 @@ class NoteBadge(QWidget):
     Current implementation uses a colored rectangle as a placeholder for images
     """
     badgeColors = [Qt.blue, Qt.red, Qt.black, Qt.green]
+    badgeIcons = None
+    badgeStrings = ('res/note_general.png', 'res/note_combat.png',
+                    'res/note_hidden.png', 'res/note_treasure.png')
 
     def __init__(self, note=None, index=0):
         super(NoteBadge, self).__init__()
@@ -239,15 +243,23 @@ class NoteBadge(QWidget):
         self.index = index
         if note is not None:
             self.note.noteEmblemUpdated.connect(self.updateUI)
-        self.setMinimumHeight(25)
-        self.setMinimumWidth(25)
+        self.setMinimumHeight(48)
+        self.setMinimumWidth(48)
+        if NoteBadge.badgeIcons is None:
+            NoteBadge.loadNoteImages()
+
+    @classmethod
+    def loadNoteImages(cls):
+        cls.badgeIcons = []
+        for str in NoteBadge.badgeStrings:
+            cls.badgeIcons.append(QPixmap(
+                ModelManager.resourcePath(str)))
 
     def setNote(self, note, index=0):
         self.note = note
         self.index = index
         if note is not None:
             self.note.noteEmblemUpdated.connect(self.updateUI)
-        self.repaint()
 
     def updateUI(self):
         self.repaint()
@@ -255,11 +267,11 @@ class NoteBadge(QWidget):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if self.note is not None:
-            self.note.drawNoteIcon(painter, 0, 0, 25, self.index)
+            self.note.drawNoteIcon(painter, 0, 0, 48, self.index)
         else:
             painter.setPen(Qt.black)
             painter.setBrush(Qt.white)
-            painter.drawRect(0, 0, 25, 25)
+            painter.drawRect(0, 0, 48, 48)
 
 
 class NoteData(QObject):
@@ -309,10 +321,13 @@ class NoteData(QObject):
         self.yPos = y
         self.noteEmblemUpdated.emit()
 
-    def drawNoteIcon(self, painter, x, y, size, num=0):
-        painter.setBrush(NoteBadge.badgeColors[self.type])
-        painter.setPen(Qt.black)
-        painter.drawRect(x, y, size, size)
+    def drawNoteIcon(self, painter, x, y, size=48, num=0):
+        if NoteBadge.badgeIcons is None:
+            NoteBadge.loadNoteImages()
+        painter.drawPixmap(x, y, size, size, NoteBadge.badgeIcons[self.type])
+        # painter.setBrush(NoteBadge.badgeColors[self.type])
+        # painter.setPen(Qt.black)
+        # painter.drawRect(x, y, size, size)
         if num > 0:
             painter.setPen(Qt.white)
             painter.drawText(x+size/2, y+size/2, "{}".format(num))

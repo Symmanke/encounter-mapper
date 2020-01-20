@@ -322,7 +322,7 @@ class MapEditorGraphics(EMModelGraphics):
             index = 1
             for note in self.model.getMapNotes():
                 np = note.getPos()
-                note.drawNoteIcon(painter, np[0]-12, np[1]-12, 25, index)
+                note.drawNoteIcon(painter, np[0]-24, np[1]-24, 48, index)
                 index += 1
 
     def drawPreviewTileSingle(self, painter):
