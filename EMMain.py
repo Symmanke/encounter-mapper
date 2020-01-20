@@ -29,6 +29,7 @@ from PyQt5.QtCore import Qt
 from EMMapEditor import MapEditor
 from EMModel import MapModel
 from EMHelper import ModelManager, EMImageGenerator
+import math
 
 
 class EMMain(QMainWindow):
@@ -153,17 +154,35 @@ class EMMain(QMainWindow):
             modelJS = model.jsonObj()
             ModelManager.saveJSONToFile(modelJS, fp[0])
 
-    def exportEncounterMap(self):
+    def exportEncounterMap(self, mods=None):
+        modifiers = ["groupPrint"]  # if mods is None else mods
+        print(modifiers)
         filePath = QFileDialog.getSaveFileName(self, "Open Encounter",
                                                "", "Image (*.png)")
         if filePath is not None:
+            fp = filePath[0]
+            if fp.endswith(".png"):
+                fp = fp[:-4]
             # self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()
             if model is not None:
                 mapImage = EMImageGenerator.genImageFromModel(
                     model, ("drawGrid"))
                 if mapImage is not None:
-                    ModelManager.saveImageToFile(mapImage, filePath[0])
+                    if "groupPrint" in modifiers:
+                        numY = math.ceil(model.getNumRows()/3)
+                        numX = math.ceil(model.getNumCols()/2)
+                        width = 6 * 72
+                        height = 9 * 72
+                        for y in range(numY):
+                            for x in range(numX):
+                                croppedImage = mapImage.copy(
+                                    x*width, y*height, width, height)
+                                ModelManager.saveImageToFile(
+                                    croppedImage, fp+"{}{}".format(y, x))
+                    else:
+                        ModelManager.saveImageToFile(mapImage, fp)
+                    # pass
                 else:
                     print("model is not MapModel")
 

@@ -3,11 +3,11 @@
 block_cipher = None
 
 
-a = Analysis(['EMMain.py'],
+a = Analysis(['main.py'],
              pathex=['/Users/ericsymmank/Documents/python/EncounterMapper'],
              binaries=[],
              datas=[],
-             hiddenimports=['PyQt5', 'PyQt5.QtWidgets'],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -15,28 +15,27 @@ a = Analysis(['EMMain.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
-a.datas += [('./Palette.json', './Palette.json', 'DATA'),
-  ('./Group.json', './Group.json', 'DATA'),
-  ('./Tile.json', './Tile.json', 'DATA'),
-  ('./res/Title.png', './res/Title.png', 'DATA'),
-  ('./res/bg_grass.png', './res/bg_grass.png', 'DATA'),
-  ('./res/bg_tile.png', './res/bg_tile.png', 'DATA'),
-  ('./res/bg_wood.png', './res/bg_wood.png', 'DATA'),
-  ('./res/Icon.png', './res/Icon.png', 'DATA'),
-  ('./res/Icon.icns', './res/Icon.icns', 'DATA')]
+ a.datas += [('./Palette.json', './Palette.json', 'DATA'),
+      ('./Group.json', './Group.json', 'DATA'),
+      ('./Tile.json', './Tile.json', 'DATA'),
+      ('./res/Title.png', './res/Title.png', 'DATA'),
+      ('./res/bg_grass.png', './res/bg_grass.png', 'DATA'),
+      ('./res/bg_tile.png', './res/bg_tile.png', 'DATA'),
+      ('./res/bg_wood.png', './res/bg_wood.png', 'DATA')]
+
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='EMMain',
+          name='main',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False,
-          icon='res/Icon.icns')
+          console=False )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -44,8 +43,8 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='EMMain')
+               name='main')
 app = BUNDLE(coll,
-             name='EncounterMapper.app',
-             icon='res/Icon.icns',
+             name='main.app',
+             icon=None,
              bundle_identifier=None)

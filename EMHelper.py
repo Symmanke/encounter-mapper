@@ -308,9 +308,11 @@ class ModelManager():
         cls.tileModelsByID[model.getUid()] = model
         cls.saveTiles()
 
-    # Translate asset paths to useable format for PyInstaller
-    # Thanks to https://blog.aaronhktan.com/posts/2018/05/14/pyqt5-pyinstaller-executable
-
+    """
+    Translate asset paths to useable format for PyInstaller
+    Thanks to https://blog.aaronhktan.com/posts/2018/05/14/
+    pyqt5-pyinstaller-executable
+    """
     def resourcePath(relative_path):
         if hasattr(sys, '_MEIPASS'):
             return os.path.join(sys._MEIPASS, relative_path)
