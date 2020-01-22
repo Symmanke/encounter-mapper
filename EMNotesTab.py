@@ -23,10 +23,11 @@ from PyQt5.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QListWidget,
                              QPushButton, QLabel, QTextEdit, QLineEdit,
                              QVBoxLayout, QComboBox, QDialog)
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPainter, QPixmap
 from EMBaseClasses import EMEditor
-from EMHelper import ModelManager
+from EMHelper import ModelManager, EMImageGenerator
+from EMModel import NoteData
 
 
 class NotesTab(QWidget):
@@ -234,8 +235,7 @@ class NoteBadge(QLabel):
     """
     badgeColors = [Qt.blue, Qt.red, Qt.black, Qt.green]
     badgeIcons = None
-    badgeStrings = ('res/note_general.png', 'res/note_combat.png',
-                    'res/note_hidden.png', 'res/note_treasure.png')
+    badgeNums = None
 
     def __init__(self, note=None, index=0):
         super(NoteBadge, self).__init__()
@@ -251,8 +251,27 @@ class NoteBadge(QLabel):
     @classmethod
     def loadNoteImages(cls):
         cls.badgeIcons = []
-        for str in NoteBadge.badgeStrings:
+        badgeStrings = ('res/note_icons/note_general.png',
+                        'res/note_icons/note_combat.png',
+                        'res/note_icons/note_hidden.png',
+                        'res/note_icons/note_treasure.png')
+        for str in badgeStrings:
             cls.badgeIcons.append(QPixmap(
+                ModelManager.resourcePath(str)))
+
+        cls.badgeNums = []
+        numStrings = ('res/note_icons/0.png',
+                      'res/note_icons/1.png',
+                      'res/note_icons/2.png',
+                      'res/note_icons/3.png',
+                      'res/note_icons/4.png',
+                      'res/note_icons/5.png',
+                      'res/note_icons/6.png',
+                      'res/note_icons/7.png',
+                      'res/note_icons/8.png',
+                      'res/note_icons/9.png')
+        for str in numStrings:
+            cls.badgeNums.append(QPixmap(
                 ModelManager.resourcePath(str)))
 
     def setNote(self, note, index=0):
@@ -267,76 +286,10 @@ class NoteBadge(QLabel):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if self.note is not None:
-            self.note.drawNoteIcon(painter, 0, 0, 48, self.index)
+            EMImageGenerator.drawNoteIcon(painter, self.note,
+                                          0, 0, 48, self.index)
+            # self.note.drawNoteIcon(painter, 0, 0, 48, self.index)
         else:
             painter.setPen(Qt.black)
             painter.setBrush(Qt.white)
             painter.drawRect(0, 0, 48, 48)
-
-
-class NoteData(QObject):
-    """
-    Data for the note.
-
-    Unlike the model objects, notes do not exist on their own and are always
-    tied to a map. Thus, it didn't completely make sense to have them be an
-    EMModel object. During saving, the noteData is added in JSon Format to the
-    EMMapModel data.
-    """
-
-    noteEmblemUpdated = pyqtSignal()
-
-    def __init__(self, type=0, title="", desc="", xPos=0, yPos=0):
-        super(NoteData, self).__init__()
-        self.type = type
-        self.title = title
-        self.desc = desc
-        self.xPos = xPos
-        self.yPos = yPos
-
-    def getType(self):
-        return self.type
-
-    def getTitle(self):
-        return self.title
-
-    def getDesc(self):
-        return self.desc
-
-    def getPos(self):
-        return (self.xPos, self.yPos)
-
-    def setType(self, type):
-        self.type = type
-        self.noteEmblemUpdated.emit()
-
-    def setTitle(self, title):
-        self.title = title
-
-    def setDesc(self, desc):
-        self.desc = desc
-
-    def setPos(self, x, y):
-        self.xPos = x
-        self.yPos = y
-        self.noteEmblemUpdated.emit()
-
-    def drawNoteIcon(self, painter, x, y, size=48, num=0):
-        if NoteBadge.badgeIcons is None:
-            NoteBadge.loadNoteImages()
-        painter.drawPixmap(x, y, size, size, NoteBadge.badgeIcons[self.type])
-        # painter.setBrush(NoteBadge.badgeColors[self.type])
-        # painter.setPen(Qt.black)
-        # painter.drawRect(x, y, size, size)
-        if num > 0:
-            painter.setPen(Qt.white)
-            painter.drawText(x+size/2, y+size/2, "{}".format(num))
-
-    def getJSON(self):
-        return {
-            "type": self.type,
-            "title": self.title,
-            "desc": self.desc,
-            "x": self.xPos,
-            "y": self.yPos
-        }

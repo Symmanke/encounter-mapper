@@ -481,8 +481,11 @@ class MapModel(GroupModel):
 
     @classmethod
     def createModelJS(cls, jsonObj):
+        noteList = []
+        for note in jsonObj["notes"]:
+            noteList.append(NoteData.createModelJS(note))
         return cls(jsonObj["name"], jsonObj["grid"], jsonObj["ttf"],
-                   jsonObj["objects"], jsonObj["notes"], jsonObj["uid"])
+                   jsonObj["objects"], noteList, jsonObj["uid"])
 
     def getMapObjects(self):
         return self.mapObjects
@@ -501,11 +504,102 @@ class MapModel(GroupModel):
         self.modelUpdated.emit()
 
     def jsonObj(self):
+        noteList = []
+        for note in self.mapNotes:
+            noteList.append(note.jsonObj())
         return {
             "name": self.name,
             "grid": self.tileGrid,
             "ttf": self.tilesToFetch,
             "uid": self.uid,
             "objects": self.mapObjects,
-            "notes": self.mapNotes
+            "notes": noteList
+        }
+
+
+class NoteData(QObject):
+    """
+    Data for the note.
+
+    Unlike the model objects, notes do not exist on their own and are always
+    tied to a map. Thus, it didn't completely make sense to have them be an
+    EMModel object. During saving, the noteData is added in JSon Format to the
+    EMMapModel data.
+    """
+
+    noteEmblemUpdated = pyqtSignal()
+
+    def __init__(self, type=0, title="", desc="", xPos=0, yPos=0):
+        super(NoteData, self).__init__()
+        self.type = type
+        self.title = title
+        self.desc = desc
+        self.xPos = xPos
+        self.yPos = yPos
+
+    @classmethod
+    def createModelJS(cls, jsonObj):
+        return cls(jsonObj["type"], jsonObj["title"], jsonObj["desc"],
+                   jsonObj["x"], jsonObj["y"])
+
+    def getType(self):
+        return self.type
+
+    def getTitle(self):
+        return self.title
+
+    def getDesc(self):
+        return self.desc
+
+    def getPos(self, scale=1):
+        return (self.xPos * scale, self.yPos * scale)
+
+    def setType(self, type):
+        self.type = type
+        self.noteEmblemUpdated.emit()
+
+    def setTitle(self, title):
+        self.title = title
+
+    def setDesc(self, desc):
+        self.desc = desc
+
+    def setPos(self, x, y):
+        self.xPos = x
+        self.yPos = y
+        self.noteEmblemUpdated.emit()
+
+    # def drawNoteIcon(self, painter, x, y, size=48, num=0):
+    #     if NoteBadge.badgeIcons is None:
+    #         NoteBadge.loadNoteImages()
+    #     painter.drawPixmap(x, y, size, size, NoteBadge.badgeIcons[self.type])
+    #     # painter.setBrush(NoteBadge.badgeColors[self.type])
+    #     # painter.setPen(Qt.black)
+    #     # painter.drawRect(x, y, size, size)
+    #     if num > 0:
+    #         numImgs = []
+    #         numWidth = 0
+    #         while num > 0:
+    #             n = num % 10
+    #             numImgs.insert(0, NoteBadge.badgeNums[n])
+    #             numWidth += NoteBadge.badgeNums[-1].width()
+    #             num = int(num/10)
+    #         # Get offsets to center the numbers
+    #         xNumOffset = x + int((size-numWidth)/2)
+    #         # draw the num images
+    #         for i in numImgs:
+    #             painter.drawPixmap(xNumOffset, y+14, i)
+    #             xNumOffset += i.width()
+
+        # painter.drawPixmap(x+10, y+10, NoteBadge.badgeNums[num])
+        # painter.setPen(Qt.white)
+        # painter.drawText(x+size/2, y+size/2, "{}".format(num))
+
+    def jsonObj(self):
+        return {
+            "type": self.type,
+            "title": self.title,
+            "desc": self.desc,
+            "x": self.xPos,
+            "y": self.yPos
         }
