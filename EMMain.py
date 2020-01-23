@@ -136,14 +136,26 @@ class EMMain(QMainWindow):
                 self.mapEditor.setFilePath(pathToOpen)
                 self.editStack.setCurrentIndex(1)
 
+                self.setWindowTitle(pathToOpen[0])
+
     def saveAsEncounter(self):
         filePath = QFileDialog.getSaveFileName(self, 'Save File',
                                                '', "Encounter Map (*.emap)")
         if filePath is not None:
             self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()
+            # Grab name from FilePath
+            fp = filePath[0]
+            if "/" in fp:
+                fp = fp.split("/")[-1]
+            if fp.endswith(".emap"):
+                fp = fp[:-5]
+            model.setName(fp)
             modelJS = model.jsonObj()
             ModelManager.saveJSONToFile(modelJS, filePath[0])
+            # update the string
+            self.mapEditor.markEdited(False)
+            self.setWindowTitle(filePath[0])
 
     def saveEncounter(self):
         fp = self.mapEditor.getFilePath()

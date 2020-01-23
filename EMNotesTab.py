@@ -233,9 +233,6 @@ class NoteBadge(QLabel):
 
     Current implementation uses a colored rectangle as a placeholder for images
     """
-    badgeColors = [Qt.blue, Qt.red, Qt.black, Qt.green]
-    badgeIcons = None
-    badgeNums = None
 
     def __init__(self, note=None, index=0):
         super(NoteBadge, self).__init__()
@@ -245,34 +242,6 @@ class NoteBadge(QLabel):
             self.note.modelUpdated.connect(self.updateUI)
         self.setMinimumHeight(48)
         self.setMinimumWidth(48)
-        if NoteBadge.badgeIcons is None:
-            NoteBadge.loadNoteImages()
-
-    @classmethod
-    def loadNoteImages(cls):
-        cls.badgeIcons = []
-        badgeStrings = ('res/note_icons/note_general.png',
-                        'res/note_icons/note_combat.png',
-                        'res/note_icons/note_hidden.png',
-                        'res/note_icons/note_treasure.png')
-        for str in badgeStrings:
-            cls.badgeIcons.append(QPixmap(
-                ModelManager.resourcePath(str)))
-
-        cls.badgeNums = []
-        numStrings = ('res/note_icons/0.png',
-                      'res/note_icons/1.png',
-                      'res/note_icons/2.png',
-                      'res/note_icons/3.png',
-                      'res/note_icons/4.png',
-                      'res/note_icons/5.png',
-                      'res/note_icons/6.png',
-                      'res/note_icons/7.png',
-                      'res/note_icons/8.png',
-                      'res/note_icons/9.png')
-        for str in numStrings:
-            cls.badgeNums.append(QPixmap(
-                ModelManager.resourcePath(str)))
 
     def setNote(self, note, index=0):
         self.note = note
@@ -288,7 +257,6 @@ class NoteBadge(QLabel):
         if self.note is not None:
             EMImageGenerator.drawNoteIcon(painter, self.note,
                                           0, 0, 48, self.index)
-            # self.note.drawNoteIcon(painter, 0, 0, 48, self.index)
         else:
             painter.setPen(Qt.black)
             painter.setBrush(Qt.white)

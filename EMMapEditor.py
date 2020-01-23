@@ -128,6 +128,9 @@ class MapEditor(QWidget):
         self.model.modelUpdated.connect(self.updateUI)
         self.updateUI()
 
+    def markEdited(self, edited=False):
+        self.edited = edited
+
     def getFilePath(self):
         return self.filePathOfModel
 
@@ -206,6 +209,9 @@ class MapEditor(QWidget):
         # self.mapEditGraphics.calculateOffsets()
         self.mapEditGraphics.calculateSize()
         self.mapEditGraphics.repaint()
+
+        # Update the name of the thing
+        self.setWindowTitle(self.model.getName())
 
 
 class MapEditorGraphics(EMModelGraphics):
@@ -341,15 +347,16 @@ class MapEditorGraphics(EMModelGraphics):
                         np[1]-24, 48, index+1, options)
                     # note.drawNoteIcon(painter, )
                     index += 1
-                if self.pressedItem is not None:
-                    if self.pressedItem[0] == 3:
-                        np = note.getPos()
-                        # print(np)
-                        np = (int(np[0] * self.tileSize),
-                              int(np[1] * self.tileSize))
-                        EMImageGenerator.drawNoteIcon(
-                            painter, note, np[0]-24,
-                            np[1]-24, 48, 1, ["selected"])
+            if self.pressedItem is not None:
+                if self.pressedItem[0] == 3:
+                    note = self.pressedItem[1]
+                    np = note.getPos()
+                    # print(np)
+                    np = (int(np[0] * self.tileSize),
+                          int(np[1] * self.tileSize))
+                    EMImageGenerator.drawNoteIcon(
+                        painter, note, np[0]-24,
+                        np[1]-24, 48, notes.index(note) + 1, ["selected"])
 
     def drawPreviewTileSingle(self, painter):
         if self.selectedModelImages[0] is not None:
