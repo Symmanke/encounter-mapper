@@ -1,4 +1,5 @@
-![](res/Title.png)
+![Encounter Mapper 0.1](res/Title.png)
+**Version 0.1**
 
 Encounter Mapper is a toolset used for developing tile-based
 grid maps for role-playing games such as D&D, etc. The
@@ -9,12 +10,13 @@ Encounter Builder is developed in Python 3 using PyQT.
 
 ## **Current Features:**
 
-![](res/Map_Screen.png)
+![Map Editor Screen](res/Map_Screen.png)
 - Tile-based map editor
-![](res/Tile_Screen.png)
+![Tile Editor Screen](res/Tile_Screen.png)
 - Editor for individual tiles as well as tile groups
-![](res/Palette_Screen.png)
+![Color Palette Screen](res/Palette_Screen.png)
 - Palette editor for the tile Foreground and Background (to be refactored in future version)
+![Note Objects](res/Note_Screen.png)
 - Notes Editor to provide additional details regarding the encounter.
 - Ability to save and load encounters
 - Ability to export encounter map for use in games
@@ -32,3 +34,10 @@ Encounter Builder is developed in Python 3 using PyQT.
     - shading/lighting effects
 - **Refactor of the Palette Editor** for cleaner color pickers
 - better error handling and more clear documentation
+
+## **Installation**
+**Mac:** In the Downloads directory, download EncounterMapper.app.
+
+**Windows/Linux:** TBD
+
+All code can be run on a machine with PyQt5 installed. It is suggested to run EMMain.py, though all Editor files can be run to bring up their respective windows in isolation

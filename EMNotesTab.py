@@ -138,7 +138,18 @@ class NotesTab(QWidget):
         self.noteDialog.exec_()
 
     def editNoteDialog(self):
-        pass
+        # grab selected note
+        note = NoteData.createModelCopy(
+            self.currentEditor.getNotes()[self.noteList.currentRow()-1])
+
+        self.noteDialog = QDialog()
+        layout = QVBoxLayout()
+        self.noteEditor = NoteEditor(note)
+        self.noteEditor.applyEdit.connect(self.updateNote)
+        self.noteEditor.cancelEdit.connect(self.cancelNote)
+        layout.addWidget(self.noteEditor)
+        self.noteDialog.setLayout(layout)
+        self.noteDialog.exec_()
 
     def deleteNote(self):
         pass
@@ -152,6 +163,15 @@ class NotesTab(QWidget):
     def addNewNote(self):
         newNote = self.noteEditor.getGeneratedNote()
         self.currentEditor.addNote(newNote)
+
+        self.noteDialog.close()
+        self.noteDialog = None
+        self.noteEditor = None
+
+    def updateNote(self):
+        updatedNote = self.noteEditor.getGeneratedNote()
+        self.currentEditor.updateNote(
+            updatedNote, self.noteList.currentRow()-1)
 
         self.noteDialog.close()
         self.noteDialog = None
@@ -173,6 +193,19 @@ class NotesTab(QWidget):
             self.noteDesc.setText(
                 "Notes can be used to describe what is going on in an " +
                 "encounter. Click 'Edit' or 'New' to get started!")
+        self.enableButtons()
+        # self.noteList.repaint()
+
+    def enableButtons(self):
+        nr = len(self.currentEditor.getNotes())
+        cr = self.noteList.currentRow()
+        self.editBtn.setEnabled(cr > 0)
+        self.delBtn.setEnabled(cr > 0)
+        self.upBtn.setEnabled(cr > 0 and nr >= 2)
+        self.downBtn.setEnabled(cr > 0 and nr >= 2)
+
+        self.editBtn.repaint()
+        self.btnGroup.repaint()
 
 
 class NoteEditor(EMEditor):
@@ -191,11 +224,13 @@ class NoteEditor(EMEditor):
         self.note = NoteData() if note is None else note
 
         self.noteBadge = NoteBadge(self.note)
-        self.title = QLineEdit()
+        self.title = QLineEdit(self.note.getName())
         self.noteType = QComboBox()
-        self.noteType.currentIndexChanged.connect(self.note.setType)
         self.noteType.addItems(["General", "Combat", "Hidden", "Treasure"])
-        self.desc = QTextEdit()
+        print(self.note.getType())
+        self.noteType.setCurrentIndex(self.note.getType())
+        self.noteType.currentIndexChanged.connect(self.note.setType)
+        self.desc = QTextEdit(self.note.getDesc())
 
         layout = QVBoxLayout()
         titleGroup = QWidget()

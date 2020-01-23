@@ -318,7 +318,7 @@ class GroupModel(EMModel):
 
     @classmethod
     def createModelTransform(cls, model, options):
-        print("Transform Options: {}".format(options))
+        # print("Transform Options: {}".format(options))
         tmGrid = model.getTileGrid()
         mGrid = []
         for row in tmGrid:
@@ -326,7 +326,7 @@ class GroupModel(EMModel):
             for tile in row:
                 mGrid[-1].append((tile[0], tile[1], tile[2], tile[3]))
                 # loop 1: rotate tiles inside
-        print("Before:{}".format(mGrid))
+        # print("Before:{}".format(mGrid))
         for y in range(len(mGrid)):
             for x in range(len(mGrid[y])):
                 tile = mGrid[y][x]
@@ -337,7 +337,7 @@ class GroupModel(EMModel):
                 if(tile[2] ^ tile[3]) and mGrid[y][x][1] % 2:
                     mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
 
-        print("after:{}".format(mGrid))
+        # print("after:{}".format(mGrid))
         # loop 2: rotate grid itself
         tGrid = []
         numRows = model.getNumRows()
@@ -500,7 +500,9 @@ class MapModel(GroupModel):
         self.modelUpdated.emit()
 
     def updateMapNote(self, note, index):
-        if index > 0 and index < len(self.mapNotes):
+        print(index)
+        print(note.getName())
+        if index >= 0 and index < len(self.mapNotes):
             self.mapNotes[index] = note
         self.modelUpdated.emit()
 
@@ -540,6 +542,13 @@ class NoteData(EMModel):
         return cls(jsonObj["type"], jsonObj["name"], jsonObj["desc"],
                    jsonObj["x"], jsonObj["y"], jsonObj["uid"])
 
+    @classmethod
+    def createModelCopy(cls, model):
+        pos = model.getPos()
+        mcopy = cls(model.getType(), model.getName(), model.getDesc(),
+                    pos[0], pos[1], model.getUid())
+        return mcopy
+
     def getType(self):
         return self.type
 
@@ -564,7 +573,7 @@ class NoteData(EMModel):
     def jsonObj(self):
         return {
             "type": self.type,
-            "title": self.title,
+            "name": self.name,
             "desc": self.desc,
             "x": self.xPos,
             "y": self.yPos,
