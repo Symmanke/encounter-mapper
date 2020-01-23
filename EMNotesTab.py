@@ -112,7 +112,7 @@ class NotesTab(QWidget):
         self.noteList.addItem("(new)")
         for i in range(len(notes)):
             note = notes[i]
-            self.noteList.addItem("{}: {}".format(i+1, note.getTitle()))
+            self.noteList.addItem("{}: {}".format(i+1, note.getName()))
 
     def setSelectedNote(self, index):
         self.noteList.setCurrentRow(index)
@@ -166,7 +166,7 @@ class NotesTab(QWidget):
         cr = self.noteList.currentRow()
         if cr > 0:
             displayedNote = self.currentEditor.getNotes()[cr-1]
-            self.noteTitle.setText(displayedNote.getTitle())
+            self.noteTitle.setText(displayedNote.getName())
             self.noteDesc.setText(displayedNote.getDesc())
         else:
             self.noteTitle.setText("Create a new Note")
@@ -219,7 +219,7 @@ class NoteEditor(EMEditor):
         self.setLayout(layout)
 
     def getGeneratedNote(self):
-        self.note.setTitle(self.title.text())
+        self.note.setName(self.title.text())
         self.note.setDesc(self.desc.toPlainText())
 
         return self.note
@@ -242,7 +242,7 @@ class NoteBadge(QLabel):
         self.note = note
         self.index = index
         if note is not None:
-            self.note.noteEmblemUpdated.connect(self.updateUI)
+            self.note.modelUpdated.connect(self.updateUI)
         self.setMinimumHeight(48)
         self.setMinimumWidth(48)
         if NoteBadge.badgeIcons is None:
@@ -278,7 +278,7 @@ class NoteBadge(QLabel):
         self.note = note
         self.index = index
         if note is not None:
-            self.note.noteEmblemUpdated.connect(self.updateUI)
+            self.note.modelUpdated.connect(self.updateUI)
 
     def updateUI(self):
         self.repaint()

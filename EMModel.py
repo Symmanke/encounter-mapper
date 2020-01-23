@@ -517,7 +517,7 @@ class MapModel(GroupModel):
         }
 
 
-class NoteData(QObject):
+class NoteData(EMModel):
     """
     Data for the note.
 
@@ -527,26 +527,20 @@ class NoteData(QObject):
     EMMapModel data.
     """
 
-    noteEmblemUpdated = pyqtSignal()
-
-    def __init__(self, type=0, title="", desc="", xPos=0, yPos=0):
-        super(NoteData, self).__init__()
+    def __init__(self, type=0, name="", desc="", xPos=0, yPos=0, uid=-1):
+        super(NoteData, self).__init__(name, "", uid)
         self.type = type
-        self.title = title
         self.desc = desc
         self.xPos = xPos
         self.yPos = yPos
 
     @classmethod
     def createModelJS(cls, jsonObj):
-        return cls(jsonObj["type"], jsonObj["title"], jsonObj["desc"],
-                   jsonObj["x"], jsonObj["y"])
+        return cls(jsonObj["type"], jsonObj["name"], jsonObj["desc"],
+                   jsonObj["x"], jsonObj["y"], jsonObj["uid"])
 
     def getType(self):
         return self.type
-
-    def getTitle(self):
-        return self.title
 
     def getDesc(self):
         return self.desc
@@ -556,10 +550,7 @@ class NoteData(QObject):
 
     def setType(self, type):
         self.type = type
-        self.noteEmblemUpdated.emit()
-
-    def setTitle(self, title):
-        self.title = title
+        self.modelUpdated.emit()
 
     def setDesc(self, desc):
         self.desc = desc
@@ -567,33 +558,7 @@ class NoteData(QObject):
     def setPos(self, x, y):
         self.xPos = x
         self.yPos = y
-        self.noteEmblemUpdated.emit()
-
-    # def drawNoteIcon(self, painter, x, y, size=48, num=0):
-    #     if NoteBadge.badgeIcons is None:
-    #         NoteBadge.loadNoteImages()
-    #     painter.drawPixmap(x, y, size, size, NoteBadge.badgeIcons[self.type])
-    #     # painter.setBrush(NoteBadge.badgeColors[self.type])
-    #     # painter.setPen(Qt.black)
-    #     # painter.drawRect(x, y, size, size)
-    #     if num > 0:
-    #         numImgs = []
-    #         numWidth = 0
-    #         while num > 0:
-    #             n = num % 10
-    #             numImgs.insert(0, NoteBadge.badgeNums[n])
-    #             numWidth += NoteBadge.badgeNums[-1].width()
-    #             num = int(num/10)
-    #         # Get offsets to center the numbers
-    #         xNumOffset = x + int((size-numWidth)/2)
-    #         # draw the num images
-    #         for i in numImgs:
-    #             painter.drawPixmap(xNumOffset, y+14, i)
-    #             xNumOffset += i.width()
-
-        # painter.drawPixmap(x+10, y+10, NoteBadge.badgeNums[num])
-        # painter.setPen(Qt.white)
-        # painter.drawText(x+size/2, y+size/2, "{}".format(num))
+        self.modelUpdated.emit()
 
     def jsonObj(self):
         return {
@@ -601,5 +566,6 @@ class NoteData(QObject):
             "title": self.title,
             "desc": self.desc,
             "x": self.xPos,
-            "y": self.yPos
+            "y": self.yPos,
+            "uid": self.uid
         }

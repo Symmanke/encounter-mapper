@@ -60,8 +60,8 @@ class GroupEditor(EMModelEditor):
         self.tilePicker = EMModelPicker(ModelManager.TileName, TileModel,
                                         TileEditor, TilePreviewWidget)
         self.tilePicker.selectedModel.connect(self.groupPreview.setPTile)
-        self.tilePicker.updatedModel.connect(self.updateGroupList)
-        self.tilePicker.deletedModel.connect(self.groupPreview.removeTileCache)
+        # self.tilePicker.updatedModel.connect(self.updateGroupList)
+        # self.tilePicker.deletedModel.connect(self.groupPreview.removeTileCache)
         self.btnGroup = QWidget()
         btnLayout = QGridLayout()
         self.cwBtn = QPushButton("CW")
@@ -136,10 +136,6 @@ class GroupEditor(EMModelEditor):
     def delGroupCol(self):
         self.model.delCol()
 
-    def updateGroupList(self, id):
-        self.groupPreview.updateModelList(id)
-        self.groupPreview.repaint()
-
     def updateUI(self):
         # update Buttons
         options = self.groupPreview.getSOptions()
@@ -187,7 +183,6 @@ class GroupPreview(EMModelGraphics):
         self.pTileImage = EMImageGenerator.genImageFromModel(
             ModelManager.fetchByUid(ModelManager.TileName, tileId),
             {"transformOptions": self.sOptions})
-        self.updateModelList(tileId)
 
     def transformP(self, type):
         if type == "cw":
@@ -204,11 +199,6 @@ class GroupPreview(EMModelGraphics):
                                         self.selectedObject[0]),
                 {"transformOptions": self.sOptions})
         self.updatePreview.emit()
-
-    def removeTileCache(self, id):
-        if id != -1:
-            self.modelList[id] = None
-            self.repaint()
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
