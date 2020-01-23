@@ -23,11 +23,13 @@ from PyQt5.QtWidgets import (QApplication, QStackedWidget, QFileDialog,
                              QLabel, QPushButton, QVBoxLayout,
                              QWidget, QMainWindow, QAction)
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
 
 # from EMMapWidget import EMMapWidget
 from EMMapEditor import MapEditor
 from EMModel import MapModel
 from EMHelper import ModelManager, EMImageGenerator
+import math
 
 
 class EMMain(QMainWindow):
@@ -83,6 +85,14 @@ class EMMain(QMainWindow):
 
         self.setCentralWidget(self.editStack)
 
+        self.keyBindings = {
+            Qt.Key_S | Qt.ControlModifier: (self.saveEncounter,),
+            Qt.Key_S | Qt.ControlModifier | Qt.ShiftModifier:
+            (self.saveAsEncounter,),
+            Qt.Key_N | Qt.ControlModifier: (self.newEncounter,),
+            Qt.Key_O | Qt.ControlModifier: (self.openEncounter,),
+        }
+
     def initialWidget(self):
         widget = QWidget()
         layout = QVBoxLayout()
@@ -91,7 +101,8 @@ class EMMain(QMainWindow):
         open = QPushButton("Open Encounter")
         open.clicked.connect(self.openEncounter)
         imageLabel = QLabel()
-        imageLabel.setPixmap(QPixmap("res/Title.png").scaled(972, 540))
+        imageLabel.setPixmap(QPixmap(
+            ModelManager.resourcePath("res/Title.png")).scaled(972, 540))
 
         layout.addWidget(imageLabel)
         layout.addWidget(new)
@@ -99,6 +110,15 @@ class EMMain(QMainWindow):
         widget.setLayout(layout)
 
         return widget
+
+    def keyPressEvent(self, event):
+        key = event.key() | int(event.modifiers())
+        if key in self.keyBindings:
+            command = self.keyBindings[key]
+            if len(command) == 1:
+                command[0]()
+            else:
+                command[0](command[1])
 
     def newEncounter(self):
         self.editStack.setCurrentIndex(1)
@@ -113,7 +133,10 @@ class EMMain(QMainWindow):
             if self.model is not None:
 
                 self.mapEditor.setModel(self.model)
+                self.mapEditor.setFilePath(pathToOpen)
                 self.editStack.setCurrentIndex(1)
+
+                self.setWindowTitle(pathToOpen[0])
 
     def saveAsEncounter(self):
         filePath = QFileDialog.getSaveFileName(self, 'Save File',
@@ -121,23 +144,57 @@ class EMMain(QMainWindow):
         if filePath is not None:
             self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()
+            # Grab name from FilePath
+            fp = filePath[0]
+            if "/" in fp:
+                fp = fp.split("/")[-1]
+            if fp.endswith(".emap"):
+                fp = fp[:-5]
+            model.setName(fp)
             modelJS = model.jsonObj()
             ModelManager.saveJSONToFile(modelJS, filePath[0])
+            # update the string
+            self.mapEditor.markEdited(False)
+            self.setWindowTitle(filePath[0])
 
     def saveEncounter(self):
-        pass
+        fp = self.mapEditor.getFilePath()
+        if fp is None:
+            self.saveAsEncounter()
+        else:
+            model = self.mapEditor.getModel()
+            modelJS = model.jsonObj()
+            ModelManager.saveJSONToFile(modelJS, fp[0])
 
-    def exportEncounterMap(self):
+    def exportEncounterMap(self, mods=None):
+        modifiers = ["groupPrint"]  # if mods is None else mods
+        print(modifiers)
         filePath = QFileDialog.getSaveFileName(self, "Open Encounter",
                                                "", "Image (*.png)")
         if filePath is not None:
+            fp = filePath[0]
+            if fp.endswith(".png"):
+                fp = fp[:-4]
             # self.mapEditor.setFilePath(filePath)
             model = self.mapEditor.getModel()
             if model is not None:
                 mapImage = EMImageGenerator.genImageFromModel(
                     model, ("drawGrid"))
                 if mapImage is not None:
-                    ModelManager.saveImageToFile(mapImage, filePath[0])
+                    if "groupPrint" in modifiers:
+                        numY = math.ceil(model.getNumRows()/3)
+                        numX = math.ceil(model.getNumCols()/2)
+                        width = 6 * 72
+                        height = 9 * 72
+                        for y in range(numY):
+                            for x in range(numX):
+                                croppedImage = mapImage.copy(
+                                    x*width, y*height, width, height)
+                                ModelManager.saveImageToFile(
+                                    croppedImage, fp+"{}{}".format(y, x))
+                    else:
+                        ModelManager.saveImageToFile(mapImage, fp)
+                    # pass
                 else:
                     print("model is not MapModel")
 

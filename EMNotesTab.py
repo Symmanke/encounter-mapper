@@ -23,9 +23,11 @@ from PyQt5.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QListWidget,
                              QPushButton, QLabel, QTextEdit, QLineEdit,
                              QVBoxLayout, QComboBox, QDialog)
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from PyQt5.QtGui import QPainter
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QPainter, QPixmap
 from EMBaseClasses import EMEditor
+from EMHelper import ModelManager, EMImageGenerator
+from EMModel import NoteData
 
 
 class NotesTab(QWidget):
@@ -110,7 +112,7 @@ class NotesTab(QWidget):
         self.noteList.addItem("(new)")
         for i in range(len(notes)):
             note = notes[i]
-            self.noteList.addItem("{}: {}".format(i+1, note.getTitle()))
+            self.noteList.addItem("{}: {}".format(i+1, note.getName()))
 
     def setSelectedNote(self, index):
         self.noteList.setCurrentRow(index)
@@ -136,7 +138,18 @@ class NotesTab(QWidget):
         self.noteDialog.exec_()
 
     def editNoteDialog(self):
-        pass
+        # grab selected note
+        note = NoteData.createModelCopy(
+            self.currentEditor.getNotes()[self.noteList.currentRow()-1])
+
+        self.noteDialog = QDialog()
+        layout = QVBoxLayout()
+        self.noteEditor = NoteEditor(note)
+        self.noteEditor.applyEdit.connect(self.updateNote)
+        self.noteEditor.cancelEdit.connect(self.cancelNote)
+        layout.addWidget(self.noteEditor)
+        self.noteDialog.setLayout(layout)
+        self.noteDialog.exec_()
 
     def deleteNote(self):
         pass
@@ -155,6 +168,15 @@ class NotesTab(QWidget):
         self.noteDialog = None
         self.noteEditor = None
 
+    def updateNote(self):
+        updatedNote = self.noteEditor.getGeneratedNote()
+        self.currentEditor.updateNote(
+            updatedNote, self.noteList.currentRow()-1)
+
+        self.noteDialog.close()
+        self.noteDialog = None
+        self.noteEditor = None
+
     def cancelNote(self):
         self.noteDialog.close()
         self.noteDialog = None
@@ -164,13 +186,26 @@ class NotesTab(QWidget):
         cr = self.noteList.currentRow()
         if cr > 0:
             displayedNote = self.currentEditor.getNotes()[cr-1]
-            self.noteTitle.setText(displayedNote.getTitle())
+            self.noteTitle.setText(displayedNote.getName())
             self.noteDesc.setText(displayedNote.getDesc())
         else:
             self.noteTitle.setText("Create a new Note")
             self.noteDesc.setText(
                 "Notes can be used to describe what is going on in an " +
                 "encounter. Click 'Edit' or 'New' to get started!")
+        self.enableButtons()
+        # self.noteList.repaint()
+
+    def enableButtons(self):
+        nr = len(self.currentEditor.getNotes())
+        cr = self.noteList.currentRow()
+        self.editBtn.setEnabled(cr > 0)
+        self.delBtn.setEnabled(cr > 0)
+        self.upBtn.setEnabled(cr > 0 and nr >= 2)
+        self.downBtn.setEnabled(cr > 0 and nr >= 2)
+
+        self.editBtn.repaint()
+        self.btnGroup.repaint()
 
 
 class NoteEditor(EMEditor):
@@ -189,11 +224,13 @@ class NoteEditor(EMEditor):
         self.note = NoteData() if note is None else note
 
         self.noteBadge = NoteBadge(self.note)
-        self.title = QLineEdit()
+        self.title = QLineEdit(self.note.getName())
         self.noteType = QComboBox()
-        self.noteType.currentIndexChanged.connect(self.note.setType)
         self.noteType.addItems(["General", "Combat", "Hidden", "Treasure"])
-        self.desc = QTextEdit()
+        print(self.note.getType())
+        self.noteType.setCurrentIndex(self.note.getType())
+        self.noteType.currentIndexChanged.connect(self.note.setType)
+        self.desc = QTextEdit(self.note.getDesc())
 
         layout = QVBoxLayout()
         titleGroup = QWidget()
@@ -217,13 +254,13 @@ class NoteEditor(EMEditor):
         self.setLayout(layout)
 
     def getGeneratedNote(self):
-        self.note.setTitle(self.title.text())
+        self.note.setName(self.title.text())
         self.note.setDesc(self.desc.toPlainText())
 
         return self.note
 
 
-class NoteBadge(QWidget):
+class NoteBadge(QLabel):
     """
     Note badge is a graphical represenation of the note on the map and
     elsewhere. It will contain an image representing the different types
@@ -231,23 +268,21 @@ class NoteBadge(QWidget):
 
     Current implementation uses a colored rectangle as a placeholder for images
     """
-    badgeColors = [Qt.blue, Qt.red, Qt.black, Qt.green]
 
     def __init__(self, note=None, index=0):
         super(NoteBadge, self).__init__()
         self.note = note
         self.index = index
         if note is not None:
-            self.note.noteEmblemUpdated.connect(self.updateUI)
-        self.setMinimumHeight(25)
-        self.setMinimumWidth(25)
+            self.note.modelUpdated.connect(self.updateUI)
+        self.setMinimumHeight(48)
+        self.setMinimumWidth(48)
 
     def setNote(self, note, index=0):
         self.note = note
         self.index = index
         if note is not None:
-            self.note.noteEmblemUpdated.connect(self.updateUI)
-        self.repaint()
+            self.note.modelUpdated.connect(self.updateUI)
 
     def updateUI(self):
         self.repaint()
@@ -255,73 +290,9 @@ class NoteBadge(QWidget):
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
         if self.note is not None:
-            self.note.drawNoteIcon(painter, 0, 0, 25, self.index)
+            EMImageGenerator.drawNoteIcon(painter, self.note,
+                                          0, 0, 48, self.index)
         else:
             painter.setPen(Qt.black)
             painter.setBrush(Qt.white)
-            painter.drawRect(0, 0, 25, 25)
-
-
-class NoteData(QObject):
-    """
-    Data for the note.
-
-    Unlike the model objects, notes do not exist on their own and are always
-    tied to a map. Thus, it didn't completely make sense to have them be an
-    EMModel object. During saving, the noteData is added in JSon Format to the
-    EMMapModel data.
-    """
-
-    noteEmblemUpdated = pyqtSignal()
-
-    def __init__(self, type=0, title="", desc="", xPos=0, yPos=0):
-        super(NoteData, self).__init__()
-        self.type = type
-        self.title = title
-        self.desc = desc
-        self.xPos = xPos
-        self.yPos = yPos
-
-    def getType(self):
-        return self.type
-
-    def getTitle(self):
-        return self.title
-
-    def getDesc(self):
-        return self.desc
-
-    def getPos(self):
-        return (self.xPos, self.yPos)
-
-    def setType(self, type):
-        self.type = type
-        self.noteEmblemUpdated.emit()
-
-    def setTitle(self, title):
-        self.title = title
-
-    def setDesc(self, desc):
-        self.desc = desc
-
-    def setPos(self, x, y):
-        self.xPos = x
-        self.yPos = y
-        self.noteEmblemUpdated.emit()
-
-    def drawNoteIcon(self, painter, x, y, size, num=0):
-        painter.setBrush(NoteBadge.badgeColors[self.type])
-        painter.setPen(Qt.black)
-        painter.drawRect(x, y, size, size)
-        if num > 0:
-            painter.setPen(Qt.white)
-            painter.drawText(x+size/2, y+size/2, "{}".format(num))
-
-    def getJSON(self):
-        return {
-            "type": self.type,
-            "title": self.title,
-            "desc": self.desc,
-            "x": self.xPos,
-            "y": self.yPos
-        }
+            painter.drawRect(0, 0, 48, 48)

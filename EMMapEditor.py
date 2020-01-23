@@ -47,6 +47,7 @@ class MapEditor(QWidget):
         self.model = MapModel() if model is None else model
         self.model.modelUpdated.connect(self.updateUI)
 
+        self.mouseOverItem = None
         self.pressedItem = None
         self.filePathOfModel = None
 
@@ -127,6 +128,9 @@ class MapEditor(QWidget):
         self.model.modelUpdated.connect(self.updateUI)
         self.updateUI()
 
+    def markEdited(self, edited=False):
+        self.edited = edited
+
     def getFilePath(self):
         return self.filePathOfModel
 
@@ -173,8 +177,8 @@ class MapEditor(QWidget):
     def addNote(self, note, index=-1, x=-1, y=-1):
         # Since this is a new note, begin in the center
         if x == -1 and y == -1:
-            x = (self.model.getNumCols()*100)/2
-            y = (self.model.getNumRows()*100)/2
+            x = self.model.getNumCols()/2
+            y = self.model.getNumRows()/2
         note.setPos(x, y)
         self.model.addMapNote(note, index)
         self.notesWidget.populateList(self.model.getMapNotes())
@@ -206,6 +210,9 @@ class MapEditor(QWidget):
         self.mapEditGraphics.calculateSize()
         self.mapEditGraphics.repaint()
 
+        # Update the name of the thing
+        self.setWindowTitle(self.model.getName())
+
 
 class MapEditorGraphics(EMModelGraphics):
 
@@ -225,6 +232,7 @@ class MapEditorGraphics(EMModelGraphics):
         # Need for later, when I introduce objects (unless I decide to make)
         # everything grid based instead for simplicity's sake
         self.mousePosition = (-1, -1)
+        self.mouseOverItem = None
         self.pressedItem = None
 
         self.keyBindings = {
@@ -319,11 +327,36 @@ class MapEditorGraphics(EMModelGraphics):
                     self.drawPreviewTileGroup(painter)
 
             # Draw the notes
-            index = 1
-            for note in self.model.getMapNotes():
-                np = note.getPos()
-                note.drawNoteIcon(painter, np[0]-12, np[1]-12, 25, index)
-                index += 1
+            notes = self.model.getMapNotes()
+            for index in range(len(notes)):
+                # print(index)
+                note = notes[index]
+                if self.pressedItem is None or self.pressedItem[1] is not note:
+                    np = note.getPos()
+                    # print(np)
+                    np = (int(np[0] * self.tileSize),
+                          int(np[1] * self.tileSize))
+                    options = []
+                    print(self.mouseOverItem)
+                    if (self.mouseOverItem is not None
+                        and self.mouseOverItem[0] == 3
+                            and self.mouseOverItem[1] == index):
+                        options.append("mouseover")
+                    EMImageGenerator.drawNoteIcon(
+                        painter, note, np[0]-24,
+                        np[1]-24, 48, index+1, options)
+                    # note.drawNoteIcon(painter, )
+                    index += 1
+            if self.pressedItem is not None:
+                if self.pressedItem[0] == 3:
+                    note = self.pressedItem[1]
+                    np = note.getPos()
+                    # print(np)
+                    np = (int(np[0] * self.tileSize),
+                          int(np[1] * self.tileSize))
+                    EMImageGenerator.drawNoteIcon(
+                        painter, note, np[0]-24,
+                        np[1]-24, 48, notes.index(note) + 1, ["selected"])
 
     def drawPreviewTileSingle(self, painter):
         if self.selectedModelImages[0] is not None:
@@ -332,16 +365,6 @@ class MapEditorGraphics(EMModelGraphics):
             painter.drawImage(point[0], point[1],
                               self.selectedModelImages[0].scaled(
                 self.tileSize, self.tileSize))
-
-        # if self.selectedObject[0] not in self.modelList:
-        #     self.updateModelList(self.selectedObject[0])
-        # # draw single object
-        # model = self.modelList[self.selectedObject[0]]
-        # img = EMImageGenerator.genImageFromModel(model)
-        # point = (int(self.xOffset + (self.tileSize * self.mouseIndex[0])),
-        #          int(self.yOffset + (self.tileSize * self.mouseIndex[1])))
-        # painter.drawImage(point[0], point[1],
-        #                   img.scaled(self.tileSize, self.tileSize))
 
         EMImageGenerator.drawGrid(
             painter, 1, 1, point[0], point[1],
@@ -363,6 +386,26 @@ class MapEditorGraphics(EMModelGraphics):
                 painter, model.getNumCols(), model.getNumRows(),
                 point[0], point[1], self.tileSize, Qt.red)
 
+    def calcMouseOverItem(self):
+        mp = (self.mousePosition[0] * self.tileSize,
+              self.mousePosition[1] * self.tileSize,)
+        notes = self.model.getMapNotes()
+        moi = (None if self.mouseOverItem is None
+               else notes[self.mouseOverItem[1]])
+        if moi is None or self.distanceHelper(
+                mp, moi.getPos(self.tileSize)) > 576:
+            self.mouseOverItem = None
+            for i in range(len(notes)):
+                note = notes[i]
+                if self.distanceHelper(
+                        mp, note.getPos(self.tileSize)) <= 576:
+                    self.mouseOverItem = (3, i)
+                    # print("Selecting mouseOverItem")
+                    self.repaint()
+                    break
+        if moi is not None and self.mouseOverItem is None:
+            self.repaint()
+
     def keyPressEvent(self, event):
         if self.preview:
             event.ignore()
@@ -371,6 +414,9 @@ class MapEditorGraphics(EMModelGraphics):
             if key in self.keyBindings:
                 command = self.keyBindings[key]
                 command[0](command[1])
+            else:
+                # Ignore event so it can percolate up
+                event.ignore()
 
     def mousePressEvent(self, QMouseEvent):
         if self.preview:
@@ -392,29 +438,26 @@ class MapEditorGraphics(EMModelGraphics):
                         for y in range(self.selectedGroup.getNumRows()):
                             for x in range(self.selectedGroup.getNumCols()):
                                 tile = gGrid[y][x]
-                                print(tile)
                                 self.model.setTileForIndex(
                                     groupIndex[0] + x, groupIndex[1] + y,
                                     tile)
                         self.repaint()
                     elif self.openTab == 3:
-                        print("Checking the Notes Tab")
-                        mp = self.mousePosition
-                        notes = self.model.getMapNotes()
-                        for i in range(len(notes)):
-                            note = notes[i]
-                            if self.distanceHelper(mp, note.getPos()) <= 1000:
-                                self.pressedItem = (3, note)
-                                self.selectedItem.emit(3, i+1)
-                                break
+                        # print("Checking the Notes Tab")
+                        if self.mouseOverItem is not None:
+                            note = (self.model.getMapNotes()
+                                    [self.mouseOverItem[1]])
+                            self.pressedItem = (3, note)
+                            self.selectedItem.emit(3, self.mouseOverItem[1]+1)
 
     def mouseMoveEvent(self, QMouseEvent):
         if self.preview:
             QMouseEvent.ignore()
         else:
             self.setFocus()
-            self.mousePosition = self.mousePosScale(
-                QMouseEvent.pos(), 0, 0, 200)
+            mp = QMouseEvent.pos()
+            self.mousePosition = self.mousePosScale(mp, 0, 0, self.tileSize)
+            # print(self.mousePosition)
             prevIndex = self.mouseIndex
             self.mouseIndex = self.calcMouseIndex(QMouseEvent.pos())
             if self.openTab == 0 or self.openTab == 1:
@@ -428,10 +471,15 @@ class MapEditorGraphics(EMModelGraphics):
                             tile)
                     self.repaint()
             else:
-                if self.mousePressed and self.pressedItem is not None:
+                if self.openTab == 3 and not self.mousePressed:
+                    # print("YES")
+                    self.calcMouseOverItem()
+                elif self.mousePressed and self.pressedItem is not None:
                     if self.pressedItem[0] == 3:
                         self.pressedItem[1].setPos(
                             self.mousePosition[0], self.mousePosition[1])
+                        # print(notePos)
+
                     self.repaint()
 
     def mouseReleaseEvent(self, QMouseEvent):

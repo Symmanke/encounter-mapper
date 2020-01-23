@@ -20,10 +20,12 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from EMModel import TileModel, GroupModel, MapModel
-from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform, QPen
+from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform, QPen, QPixmap
 from PyQt5.QtCore import Qt
 
 import json
+import os
+import sys
 
 
 class ModelManager():
@@ -76,8 +78,9 @@ class ModelManager():
     def loadModelListFromFile(cls, name, classType, ext=".json"):
         if name not in cls.loadedModels:
             # fetch data according to filename
+            filePath = cls.resourcePath(name+ext)
             modelList = []
-            f = open(name+ext, "r")
+            f = open(filePath, "r")
             if f.mode == "r":
                 contents = f.read()
                 jsContents = json.loads(contents)
@@ -123,14 +126,14 @@ class ModelManager():
             modelJS.append(model.jsonObj())
 
         text = json.dumps(modelJS)
-        f = open(name+ext, "w+")
+        f = open(cls.resourcePath(name+ext), "w+")
         f.write(text)
         f.close()
 
     @classmethod
     def saveJSONToFile(cls, jsObj,  path, ext=""):
         text = json.dumps(jsObj)
-        f = open(path+ext, "w+")
+        f = open(cls.resourcePath(path+ext), "w+")
         f.write(text)
         f.close()
 
@@ -259,33 +262,6 @@ class ModelManager():
             pass
 
     @classmethod
-    def loadGroups(cls):
-        """"Todo"""
-
-    @classmethod
-    def savePalette(cls):
-        """"Todo"""
-
-    @classmethod
-    def saveTiles(cls):
-        tileJS = {
-            "tiles": [],
-            "patterns": []
-        }
-        for tm in cls.tileModels:
-            tileJS["tiles"].append(tm.jsonObj())
-
-        # Do fancy stuff to save the tile map
-        text = json.dumps(tileJS)
-        f = open("tiles.json", "w+")
-        f.write(text)
-        f.close()
-
-    @classmethod
-    def saveGroups(cls):
-        """"Todo"""
-
-    @classmethod
     def copyList(cls, list, type):
         copiedList = []
         if type == "tile":
@@ -316,23 +292,11 @@ class ModelManager():
         return None
 
     @classmethod
-    def fetchGroups(cls, keyword=None, searchType=None):
-        """"Todo"""
-
-    @classmethod
-    def updatePalette(cls, model):
-        """Todo"""
-
-    @classmethod
     def updateTile(cls, model):
         if model.getUid() in cls.tileModelsByID:
             mainModel = cls.tileModelsByID[model.getUid()]
             mainModel.updateModel(model)
         cls.saveTiles()
-
-    @classmethod
-    def updateGroup(cls, model):
-        """Todo"""
 
     @classmethod
     def addTile(cls, model, index=-1):
@@ -343,6 +307,16 @@ class ModelManager():
             cls.tileModels.insert(index, model)
         cls.tileModelsByID[model.getUid()] = model
         cls.saveTiles()
+
+    """
+    Translate asset paths to useable format for PyInstaller
+    Thanks to https://blog.aaronhktan.com/posts/2018/05/14/
+    pyqt5-pyinstaller-executable
+    """
+    def resourcePath(relative_path):
+        if hasattr(sys, '_MEIPASS'):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath('.'), relative_path)
 
 
 class EMImageGenerator():
@@ -366,6 +340,44 @@ class EMImageGenerator():
     GridPatternStandard = (3, 1, 1)
     GridPatternPreviewSimple = (2,)
     GridPatternPreview = (2, 1, 1)
+
+    badgeIcons = None
+    badgeMouseover = None
+    badgeSelected = None
+    badgeNums = None
+
+    @classmethod
+    def loadNoteImages(cls):
+        cls.badgeIcons = []
+        cls.badgeMouseover = []
+        cls.badgeSelected = []
+        cls.badgeNums = []
+
+        filePath = 'res/note_icons/{}.png'
+        noteString = 'note_{}'
+        mouseoverString = '{}_mouseover'
+        selectedString = '{}_selected'
+        badgeTypes = ('general', 'combat',
+                      'hidden', 'treasure')
+
+        for str in badgeTypes:
+            cls.badgeIcons.append(QPixmap(
+                ModelManager.resourcePath(
+                    filePath.format(noteString.format(str))
+                )))
+            cls.badgeMouseover.append(QPixmap(
+                ModelManager.resourcePath(
+                    filePath.format(mouseoverString.format(str))
+                )))
+            cls.badgeSelected.append(QPixmap(
+                ModelManager.resourcePath(
+                    filePath.format(selectedString.format(str))
+                )))
+        for i in range(0, 9):
+            cls.badgeNums.append(QPixmap(
+                ModelManager.resourcePath(
+                    filePath.format(i)
+                )))
 
     @classmethod
     def genImageFromModel(cls, model, displayOptions=None):
@@ -488,6 +500,36 @@ class EMImageGenerator():
             painter.drawLine(xoff, yd + yoff, xLen + xoff, yd + yoff)
 
     @classmethod
+    def drawNoteIcon(cls, painter, model, x, y, size=48, num=0, options=None):
+        if cls.badgeIcons is None:
+            cls.loadNoteImages()
+        options = [] if options is None else options
+        # print(options)
+        if "selected" in options:
+            painter.drawPixmap(x, y, size, size, cls.badgeSelected[model.type])
+        elif "mouseover" in options:
+            painter.drawPixmap(x, y, size, size,
+                               cls.badgeMouseover[model.type])
+        painter.drawPixmap(x, y, size, size, cls.badgeIcons[model.type])
+        # painter.setBrush(NoteBadge.badgeColors[self.type])
+        # painter.setPen(Qt.black)
+        # painter.drawRect(x, y, size, size)
+        if num > 0:
+            numImgs = []
+            numWidth = 0
+            while num > 0:
+                n = num % 10
+                numImgs.insert(0, cls.badgeNums[n])
+                numWidth += cls.badgeNums[-1].width()
+                num = int(num/10)
+            # Get offsets to center the numbers
+            xNumOffset = x + int((size-numWidth)/2)
+            # draw the num images
+            for i in numImgs:
+                painter.drawPixmap(xNumOffset, y+14, i)
+                xNumOffset += i.width()
+
+    @classmethod
     def transformImage(cls, img, options=(0, False, False)):
         tImage = img
         tImage = tImage.mirrored(options[1], options[2])
@@ -498,7 +540,8 @@ class EMImageGenerator():
     @classmethod
     def loadTexture(cls, txtName):
         texture = QImage()
-        if texture.load("res/bg_{}.png".format(txtName.lower()), "PNG"):
+        if texture.load(ModelManager.resourcePath(
+                "res/bg_{}.png".format(txtName.lower())), "PNG"):
             cls.textureCache[txtName] = texture
             print("successful Load!")
             return True

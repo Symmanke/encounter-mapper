@@ -51,6 +51,7 @@ class EMModel(QObject):
 
     def setName(self, name):
         self.name = name
+        self.modelUpdated.emit()
 
     def getTags(self):
         return self.tags
@@ -317,7 +318,7 @@ class GroupModel(EMModel):
 
     @classmethod
     def createModelTransform(cls, model, options):
-        print("Transform Options: {}".format(options))
+        # print("Transform Options: {}".format(options))
         tmGrid = model.getTileGrid()
         mGrid = []
         for row in tmGrid:
@@ -325,7 +326,7 @@ class GroupModel(EMModel):
             for tile in row:
                 mGrid[-1].append((tile[0], tile[1], tile[2], tile[3]))
                 # loop 1: rotate tiles inside
-        print("Before:{}".format(mGrid))
+        # print("Before:{}".format(mGrid))
         for y in range(len(mGrid)):
             for x in range(len(mGrid[y])):
                 tile = mGrid[y][x]
@@ -336,7 +337,7 @@ class GroupModel(EMModel):
                 if(tile[2] ^ tile[3]) and mGrid[y][x][1] % 2:
                     mGrid[y][x][1] = (mGrid[y][x][1] + 2) % 4
 
-        print("after:{}".format(mGrid))
+        # print("after:{}".format(mGrid))
         # loop 2: rotate grid itself
         tGrid = []
         numRows = model.getNumRows()
@@ -481,8 +482,11 @@ class MapModel(GroupModel):
 
     @classmethod
     def createModelJS(cls, jsonObj):
+        noteList = []
+        for note in jsonObj["notes"]:
+            noteList.append(NoteData.createModelJS(note))
         return cls(jsonObj["name"], jsonObj["grid"], jsonObj["ttf"],
-                   jsonObj["objects"], jsonObj["notes"], jsonObj["uid"])
+                   jsonObj["objects"], noteList, jsonObj["uid"])
 
     def getMapObjects(self):
         return self.mapObjects
@@ -496,16 +500,82 @@ class MapModel(GroupModel):
         self.modelUpdated.emit()
 
     def updateMapNote(self, note, index):
-        if index > 0 and index < len(self.mapNotes):
+        print(index)
+        print(note.getName())
+        if index >= 0 and index < len(self.mapNotes):
             self.mapNotes[index] = note
         self.modelUpdated.emit()
 
     def jsonObj(self):
-        return [{
+        noteList = []
+        for note in self.mapNotes:
+            noteList.append(note.jsonObj())
+        return {
             "name": self.name,
             "grid": self.tileGrid,
             "ttf": self.tilesToFetch,
             "uid": self.uid,
             "objects": self.mapObjects,
-            "notes": self.mapNotes
-        }]
+            "notes": noteList
+        }
+
+
+class NoteData(EMModel):
+    """
+    Data for the note.
+
+    Unlike the model objects, notes do not exist on their own and are always
+    tied to a map. Thus, it didn't completely make sense to have them be an
+    EMModel object. During saving, the noteData is added in JSon Format to the
+    EMMapModel data.
+    """
+
+    def __init__(self, type=0, name="", desc="", xPos=0, yPos=0, uid=-1):
+        super(NoteData, self).__init__(name, "", uid)
+        self.type = type
+        self.desc = desc
+        self.xPos = xPos
+        self.yPos = yPos
+
+    @classmethod
+    def createModelJS(cls, jsonObj):
+        return cls(jsonObj["type"], jsonObj["name"], jsonObj["desc"],
+                   jsonObj["x"], jsonObj["y"], jsonObj["uid"])
+
+    @classmethod
+    def createModelCopy(cls, model):
+        pos = model.getPos()
+        mcopy = cls(model.getType(), model.getName(), model.getDesc(),
+                    pos[0], pos[1], model.getUid())
+        return mcopy
+
+    def getType(self):
+        return self.type
+
+    def getDesc(self):
+        return self.desc
+
+    def getPos(self, scale=1):
+        return (self.xPos * scale, self.yPos * scale)
+
+    def setType(self, type):
+        self.type = type
+        self.modelUpdated.emit()
+
+    def setDesc(self, desc):
+        self.desc = desc
+
+    def setPos(self, x, y):
+        self.xPos = x
+        self.yPos = y
+        self.modelUpdated.emit()
+
+    def jsonObj(self):
+        return {
+            "type": self.type,
+            "name": self.name,
+            "desc": self.desc,
+            "x": self.xPos,
+            "y": self.yPos,
+            "uid": self.uid
+        }

@@ -309,30 +309,11 @@ class EMModelGraphics(QWidget):
         self.mouseIndex = (-1, -1)
         self.mousePressed = False
         self.modelImage = None
-        if cached:
-            self.createModelList()
 
         self.setMinimumHeight(height)
         self.setMinimumWidth(width)
         self.setMouseTracking(True)
         self.calculateOffsets()
-
-    def createModelList(self):
-        for id in self.model.getTilesToFetch():
-            self.updateModelList(id)
-        if (self.selectedObject[0] != -1 and
-                self.selectedObject[0] not in self.modelList):
-            self.updateModelList(self.selectedObject[0])
-
-    def removeTileCache(self, id):
-        if id != -1:
-            self.modelList[id] = None
-            self.repaint()
-
-    def updateModelList(self, id):
-        if id != -1:
-            self.modelList[id] = ModelManager.fetchByUid(
-                ModelManager.TileName, id)
 
     def getModelImage(self):
         return self.modelImage
@@ -369,58 +350,6 @@ class EMModelGraphics(QWidget):
         self.xOffset = (self.width - self.numCols*self.tileSize)/2
         self.yOffset = (self.height - self.numRows*self.tileSize)/2
 
-    def drawTile(self, painter, xInd, yInd, model,
-                 options=(0, False, False), previewTile=False):
-        painter.setPen(Qt.red if previewTile else Qt.black)
-        painter.setBrush(model.getBgColor())
-        painter.drawRect(int(self.xOffset + self.tileSize * xInd),
-                         int(self.yOffset + self.tileSize * yInd),
-                         self.tileSize, self.tileSize)
-        points = model.generatePointOffset(
-            xInd, yInd, self.tileSize,
-            self.xOffset, self.yOffset,
-            options[0], options[1], options[2])
-        fg = model.getFgColor()
-        painter.setPen(Qt.red if previewTile else fg)
-        painter.setBrush(fg)
-        poly = QPolygon(points)
-        painter.drawPolygon(poly)
-
-    def drawPreviewTile(self, painter, xInd, yInd):
-        if self.openTab == 0 and self.selectedObject[0] in self.modelList:
-            model = self.modelList[self.selectedObject[0]]
-            if model is not None:
-                painter.setPen(Qt.red)
-                painter.setBrush(model.getBgColor())
-                painter.drawRect(int(self.xOffset + self.tileSize * xInd),
-                                 int(self.yOffset + self.tileSize * yInd),
-                                 self.tileSize, self.tileSize)
-                points = model.generatePointOffset(
-                    xInd, yInd, self.tileSize,
-                    self.xOffset, self.yOffset,
-                    self.sOptions[0], self.sOptions[1], self.sOptions[2])
-                painter.setBrush(model.getFgColor())
-                poly = QPolygon(points)
-                painter.drawPolygon(poly)
-
-    def drawEmptyTile(self, painter, xInd, yInd):
-        painter.setPen(Qt.black)
-        painter.setBrush(Qt.white)
-        painter.drawRect(int(self.xOffset + self.tileSize * xInd),
-                         int(self.yOffset + self.tileSize * yInd),
-                         self.tileSize, self.tileSize)
-
-    def drawErrorTile(self, painter, xInd, yInd):
-        painter.setPen(Qt.black)
-        painter.setBrush(Qt.yellow)
-        painter.drawRect(self.xOffset + self.tileSize * xInd,
-                         self.yOffset + self.tileSize * yInd,
-                         self.tileSize, self.tileSize)
-        painter.setPen(Qt.red)
-        painter.drawText(self.xOffset + self.tileSize * xInd+self.tileSize/4,
-                         self.yOffset + self.tileSize * yInd+self.tileSize/2,
-                         "ERROR")
-
     def calcMouseIndex(self, mPoint):
         if mPoint.x() < self.xOffset or mPoint.y() < self.yOffset:
             return (-1, -1)
@@ -432,10 +361,10 @@ class EMModelGraphics(QWidget):
         return index
 
     def mousePosScale(self, mPoint, xOff=10, yOff=10, scale=500):
-        calcScale = self.tileSize/100
-        mp = (int((mPoint.x()-xOff)/calcScale), int((mPoint.y()-10)/calcScale))
-        ms = [self.numCols*100, self.numRows*100]
-        mp = (max(min(mp[0], ms[0]), 0), max(min(mp[1], ms[1]), 0))
+        calcScale = self.tileSize
+        mp = ((mPoint.x() - xOff)/calcScale, (mPoint.y()-yOff)/calcScale)
+        mp = (max(min(mp[0], self.numCols), 0),
+              max(min(mp[1], self.numRows), 0))
         return mp
 
     def distanceHelper(self, point1, point2):
