@@ -88,6 +88,13 @@ class TileEditor(EMModelEditor):
         self.bgTextureBox.addItem("Wood")
         self.bgTextureBox.currentIndexChanged.connect(self.updateBGTexture)
 
+        self.fgTextureBox = QComboBox()
+        self.fgTextureBox.addItem("None")
+        self.fgTextureBox.addItem("Tile")
+        self.fgTextureBox.addItem("Grass")
+        self.fgTextureBox.addItem("Wood")
+        self.fgTextureBox.currentIndexChanged.connect(self.updateFGTexture)
+
         self.buttonHolder = QWidget()
         bhLayout = QGridLayout()
         bhLayout.addWidget(self.addPointBtn, 0, 0, 1, 3)
@@ -95,7 +102,7 @@ class TileEditor(EMModelEditor):
         bhLayout.addWidget(self.upPointBtn, 1, 0, 1, 3)
         bhLayout.addWidget(self.downPointBtn, 1, 3, 1, 3)
         bhLayout.addWidget(self.bgTextureBox, 2, 0)
-        bhLayout.addWidget(QComboBox(), 3, 0)
+        bhLayout.addWidget(self.fgTextureBox, 3, 0)
         bhLayout.addWidget(self.cwBtn, 4, 0, 1, 2)
         bhLayout.addWidget(self.ccwBtn, 5, 0, 1, 2)
         bhLayout.addWidget(self.hfBtn, 4, 2, 1, 2)
@@ -179,6 +186,9 @@ class TileEditor(EMModelEditor):
 
     def updateBGTexture(self):
         self.model.setBGTexture(self.bgTextureBox.currentText())
+
+    def updateFGTexture(self):
+        self.model.setFGTexture(self.fgTextureBox.currentText())
 
     def setBGColor(self):
         bg = self.model.getFgColor()

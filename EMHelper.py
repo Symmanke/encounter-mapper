@@ -19,13 +19,13 @@ along with Encounter Mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from EMModel import TileModel, GroupModel, MapModel
-from PyQt5.QtGui import QPolygon, QImage, QPainter, QTransform, QPen, QPixmap
-from PyQt5.QtCore import Qt
-
-import json
-import os
 import sys
+import os
+import json
+from PyQt5.QtCore import Qt
+from EMModel import TileModel, GroupModel, MapModel
+from PyQt5.QtGui import (QPolygon, QImage, QPainter, QTransform, QPen, QPixmap,
+                         QBrush)
 
 
 class ModelManager():
@@ -403,8 +403,6 @@ class EMImageGenerator():
             painter = QPainter(genImage)
             cls.drawTile(painter, model)
             if "transformOptions" in displayOptions:
-                print("There are options!")
-                print(displayOptions["transformOptions"])
                 cls.drawTile(painter, model, 0, 0,
                              displayOptions["transformOptions"])
             if "drawGrid" in displayOptions:
@@ -452,7 +450,6 @@ class EMImageGenerator():
         painter.drawRect(int(res * xind),
                          int(res * yind),
                          res, res)
-        # if bgTexture != "None":
         # Add Background texture
         txtName = model.getBgTexture()
         if txtName != "None":
@@ -472,6 +469,15 @@ class EMImageGenerator():
         painter.setPen(fg)
         poly = QPolygon(points)
         painter.drawPolygon(poly)
+        # FG Texture
+        fgTxtName = model.getFgTexture()
+        if fgTxtName != "None":
+            if fgTxtName not in cls.textureCache:
+                # Attempt to load texture
+                cls.loadTexture(fgTxtName)
+            painter.setBrush(QBrush(cls.textureCache[fgTxtName]))
+            painter.setPen(Qt.NoPen)
+            painter.drawPolygon(poly)
 
     @classmethod
     def drawEmptyTile(cls, painter, xInd, yInd):

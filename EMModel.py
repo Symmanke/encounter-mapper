@@ -99,6 +99,7 @@ class TileModel(EMModel):
         self.bgColor = QColor(bg[0], bg[1], bg[2])
         self.fgColor = QColor(fg[0], fg[1], fg[2])
         self.bgTexture = "None" if bgTupe is None else bgTupe[3]
+        self.fgTexture = "None"
         self.selectedIndex = len(self.pointList) - 1
         self.tags = []
 
@@ -131,6 +132,10 @@ class TileModel(EMModel):
 
     def setBGTexture(self, texture):
         self.bgTexture = texture
+        self.modelUpdated.emit()
+
+    def setFGTexture(self, texture):
+        self.fgTexture = texture
         self.modelUpdated.emit()
 
     def addPoint(self, x, y):
@@ -207,12 +212,16 @@ class TileModel(EMModel):
     def getBgTexture(self):
         return self.bgTexture
 
+    def getFgTexture(self):
+        return self.fgTexture
+
     def getNumPoints(self):
         return len(self.pointList)
 
     def generatePointOffset(self, xInd, yInd,
                             scale=100, xOff=0, yOff=0,
-                            orientation=0, hflip=False, vflip=False):
+                            orientation=0, hflip=False,
+                            vflip=False):
         tempPoints = []
         scaleX = (xInd * scale) + xOff
         scaleY = (yInd * scale) + yOff
