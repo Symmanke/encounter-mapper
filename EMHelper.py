@@ -19,13 +19,14 @@ along with Encounter Mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+from PyQt5.QtGui import (QPolygon, QImage, QPainter, QTransform, QPen, QPixmap,
+                         QBrush, QColor)
 import sys
 import os
 import json
 from PyQt5.QtCore import Qt
-from EMModel import TileModel, GroupModel, MapModel
-from PyQt5.QtGui import (QPolygon, QImage, QPainter, QTransform, QPen, QPixmap,
-                         QBrush)
+from EMModel import (TileModel, GroupModel, MapModel,
+                     GeneratedTextureModel, ImageTextureModel)
 
 
 class ModelManager():
@@ -46,6 +47,8 @@ class ModelManager():
 
     TileName = "Tile"
     GroupName = "Group"
+    TextureName = "Texture"
+    GSTextureName = "TxtImage"
     PaletteName = "Palette"
 
     List = "List"
@@ -407,6 +410,15 @@ class EMImageGenerator():
                              displayOptions["transformOptions"])
             if "drawGrid" in displayOptions:
                 cls.drawGrid(painter, 1, 1)
+        elif isinstance(model, ImageTextureModel):
+            genImage = QImage(648, 648, QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            pass
+        elif isinstance(model, GeneratedTextureModel):
+            genImage = QImage(648, 648, QImage.Format_RGB32)
+            painter = QPainter(genImage)
+            cls.drawGeneratedTexture(painter, model)
+            pass
         else:
             print("Wrong Model")
         return genImage
@@ -534,6 +546,24 @@ class EMImageGenerator():
             for i in numImgs:
                 painter.drawPixmap(xNumOffset, y+14, i)
                 xNumOffset += i.width()
+
+    @classmethod
+    def drawGeneratedTexture(cls, painter, model):
+        """draw a 648*648 square of texture"""
+        bgColor = model.getColors()[0]
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(bgColor[0], bgColor[1], bgColor[2]))
+        painter.drawRect(0, 0, 648, 648)
+        txtName = model.getTexture()
+        if txtName != "None":
+            if txtName not in cls.textureCache:
+                # Attempt to load texture
+                cls.loadTexture(txtName)
+        # Add the texture if applicable
+            texture = cls.textureCache[txtName]
+            if texture is not None:
+                painter.drawImage(0, 0, texture,
+                                  0, 0, 648, 648)
 
     @classmethod
     def transformImage(cls, img, options=(0, False, False)):

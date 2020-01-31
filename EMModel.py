@@ -588,3 +588,117 @@ class NoteData(EMModel):
             "y": self.yPos,
             "uid": self.uid
         }
+
+
+class TextureModel(EMModel):
+    """TextureModel contains all the necessary data to generate a texture"""
+    ImageTexture = "Image"
+    GeneratedTexture = "Generated"
+    TextureSize = 648
+
+    def __init__(self, name="", type="", tags="", uid=-1):
+        super(TextureModel, self).__init__(name, tags, uid)
+
+
+class GeneratedTextureModel(TextureModel):
+    def __init__(self, name="", colors=None, texture="None", tags="", uid=-1):
+        super(GeneratedTextureModel, self).__init__(
+            name, TextureModel.GeneratedTexture, tags, uid)
+        self.colors = [(255, 255, 255)] if colors is None else colors
+        self.texture = texture
+
+    @classmethod
+    def createModelJS(cls, jsonObj):
+        jsmodel = None
+        if jsonObj["textureType"] == TextureModel.GeneratedTexture:
+            jsmodel = cls(jsonObj["name"], jsonObj["colors"],
+                          jsonObj["texture"], jsonObj["tags"], jsonObj["uid"])
+        return jsmodel
+
+    @classmethod
+    def createModelCopy(cls, model):
+        mcopy = None
+        if isinstance(model, GeneratedTextureModel):
+            mcopy = cls(model.getName(), model.getColors(), model.getTexture(),
+                        model.getTags(), model.getUid())
+        return mcopy
+
+    def setAllColors(self, colors):
+        self.colors = colors
+        self.modelUpdated.emit()
+
+    def setColor(self, color, index):
+        self.colors[index] = color
+        self.modelUpdated.emit()
+
+    def getColors(self):
+        return self.colors
+
+    def setTexture(self, texture):
+        self.texture = texture
+        self.modelUpdated.emit()
+
+    def getTexture(self):
+        return self.texture
+
+    def jsonObj(self):
+        return {
+            "textureType": TextureModel.GeneratedTexture,
+            "name": self.name,
+            "tags": self.tags,
+            "texture": self.texture,
+            "colors": self.colors,
+            "uid": self.uid
+        }
+
+
+class ImageTextureModel(TextureModel):
+    """
+    ImageTextureModel contains a filepath to an image used as a texture.
+
+    While encounterMapper allows people to generate textures from its existing
+    toolset, there are times where due to limitations it is better to upload
+    an image instead. The ImageTextureModel removes all the data used by the
+    GeneratedTextureModel, and as such, is its own separate class.
+
+    The size of an Image used should ideally be 648 x 648 and repeating. When
+    uploading an image, the image will be copied internally and scaled
+    appropriately if necessary.
+    """
+
+    def __init__(self, name="", filePath="", tags="", uid=-1):
+        super(ImageTextureModel, self).__init__(
+            name, TextureModel.ImageTexture, tags, uid)
+        self.filePath = filePath
+
+    @classmethod
+    def createModelJS(cls, jsonObj):
+        jsmodel = None
+        if jsonObj["textureType"] == TextureModel.ImageTexture:
+            jsmodel = cls(jsonObj["name"], jsonObj["filePath"],
+                          jsonObj["tags"], jsonObj["uid"])
+        return jsmodel
+
+    @classmethod
+    def createModelCopy(cls, model):
+        mcopy = None
+        if isinstance(model, ImageTextureModel):
+            mcopy = cls(model.getName(), model.getFilePath(), model.getTags(),
+                        model.getUid())
+        return mcopy
+
+    def setFilePath(self, fp):
+        self.filePath = fp
+        self.modelUpdated.emit()
+
+    def getFilePath(self):
+        return self.filePath
+
+    def jsonObj(self):
+        return {
+            "textureType": TextureModel.ImageTexture,
+            "name": self.name,
+            "tags": self.tags,
+            "filePath": self.filePath,
+            "uid": self.uid
+        }
