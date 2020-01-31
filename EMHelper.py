@@ -24,6 +24,7 @@ from PyQt5.QtGui import (QPolygon, QImage, QPainter, QTransform, QPen, QPixmap,
 import sys
 import os
 import json
+import numpy
 from PyQt5.QtCore import Qt
 from EMModel import (TileModel, GroupModel, MapModel,
                      GeneratedTextureModel, ImageTextureModel)
@@ -552,7 +553,8 @@ class EMImageGenerator():
         """draw a 648*648 square of texture"""
         bgColor = model.getColors()[0]
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(bgColor[0], bgColor[1], bgColor[2]))
+        # painter.setBrush(QColor(bgColor[0], bgColor[1], bgColor[2]))
+        painter.setBrush(QColor(Qt.white))
         painter.drawRect(0, 0, 648, 648)
         txtName = model.getTexture()
         if txtName != "None":
@@ -562,8 +564,42 @@ class EMImageGenerator():
         # Add the texture if applicable
             texture = cls.textureCache[txtName]
             if texture is not None:
-                painter.drawImage(0, 0, texture,
+                # Colorize Texture first
+                # effect = QGraphicsColorizeEffect(texture)
+                # texture.setGraphicsEffect(effect)
+                txtCopy = cls.setImageColor(
+                    texture, QColor(bgColor[0], bgColor[1], bgColor[2]))
+                painter.drawImage(0, 0, txtCopy,
                                   0, 0, 648, 648)
+
+    @classmethod
+    def setImageColor(cls, img, color):
+        """Set an image to a single color while preserving the alpha"""
+        img = img.copy()
+        red = color.red()
+        green = color.green()
+        blue = color.blue()
+        bits = img.constBits()
+        bits.setsize(img.byteCount())
+
+        arr = numpy.array(bits).reshape(img.height(), img.width(), 4)
+        for line in arr:
+            for pix in line:
+                pix[0] = blue
+                pix[1] = green
+                pix[2] = red
+        modifiedImg = QImage(arr, img.width(),
+                             img.height(), QImage.Format_RGB32)
+        return modifiedImg
+
+        # for i in range(0, len(bits), 4):
+        #     bits[i] = red
+        #     bits[i+1] = green
+        #     bits[i+2] = blue
+        # print(int(len(bits)/4))
+        # data = bits.asstring()
+        # print(bits[0])
+        # print(len(data))
 
     @classmethod
     def transformImage(cls, img, options=(0, False, False)):

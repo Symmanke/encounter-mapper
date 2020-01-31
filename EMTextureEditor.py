@@ -188,7 +188,7 @@ class TextureEditor(EMModelEditor):
 
         self.colorWidget.repaint()
         self.removeImageBtn.repaint()
-        self.previewWidget.repaint()
+        self.previewWidget.update()
 
     def uploadImage(self):
         pass
