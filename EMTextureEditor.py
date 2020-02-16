@@ -20,13 +20,13 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter, QColor
+from PyQt5.QtGui import QPainter, QColor, QPalette
 from PyQt5.QtWidgets import (QWidget, QPushButton, QSpinBox, QSlider,
                              QApplication, QGridLayout, QLabel, QComboBox,
                              QHBoxLayout)
 
 from EMBaseClasses import EMModelEditor, EMModelGraphics
-from EMModel import ImageTextureModel, GeneratedTextureModel
+from EMModel import GeneratedTextureModel
 from EMHelper import EMImageGenerator
 
 
@@ -37,6 +37,7 @@ class TextureEditor(EMModelEditor):
         super(TextureEditor, self).__init__(model)
 
         self.previewWidget = TexturePreview(self.model)
+        self.currentSelectedColor = QColor(255, 255, 255)
 
         self.uploadImageBtn = QPushButton("Upload Image")
         self.uploadImageBtn.clicked.connect(self.uploadImage)
@@ -53,14 +54,42 @@ class TextureEditor(EMModelEditor):
 
         initialColor = Qt.white
         if isinstance(model, GeneratedTextureModel):
-            c = model.getColors()[0]
-            initialColor = QColor(c[0], c[1], c[2])
+            c = model.getBgColor()
+            initialColor = c
 
         nameParent = QWidget()
         nameLayout = QHBoxLayout()
         nameLayout.addWidget(QLabel("Name:"))
         nameLayout.addWidget(self.modelNameEdit)
         nameParent.setLayout(nameLayout)
+
+        # Preview Stuff
+        self.bgColorPreview = QWidget()
+        self.bgColorPreview.setMinimumHeight(50)
+        self.bgColorPreview.setAutoFillBackground(True)
+        self.currentColorPreview = QWidget()
+        self.currentColorPreview.setMinimumHeight(50)
+        self.currentColorPreview.setAutoFillBackground(True)
+        self.subColorPreview = QWidget()
+        self.subColorPreview.setMinimumHeight(50)
+        self.subColorPreview.setAutoFillBackground(True)
+        self.subColorLabel = QLabel("Txt 1")
+
+        colorPreviewLayout = QGridLayout()
+        colorPreviewLayout.addWidget(self.bgColorPreview, 0, 0)
+        colorPreviewLayout.addWidget(self.currentColorPreview, 0, 1)
+        colorPreviewLayout.addWidget(self.subColorPreview, 0, 2)
+        colorPreviewLayout.addWidget(QLabel("BG"), 1, 0)
+        colorPreviewLayout.addWidget(QLabel("Cur"), 1, 1)
+        colorPreviewLayout.addWidget(self.subColorLabel, 1, 2)
+
+        colorPreviewWidget = QWidget()
+        colorPreviewWidget.setLayout(colorPreviewLayout)
+
+        self.setBGColorBtn = QPushButton("Set BG")
+        self.setBGColorBtn.clicked.connect(self.setBgColor)
+        self.setSubColorBtn = QPushButton("Set TXT")
+        self.setSubColorBtn.clicked.connect(self.setSubColor)
 
         # RGB Values
         self.rBox = QSpinBox()
@@ -140,9 +169,12 @@ class TextureEditor(EMModelEditor):
         editorLayout.addWidget(nameParent, 0, 0, 1, 4)
         editorLayout.addWidget(self.uploadImageBtn, 1, 0, 1, 2)
         editorLayout.addWidget(self.removeImageBtn, 1, 2, 1, 2)
-        editorLayout.addWidget(QLabel("Texture:"), 2, 0)
-        editorLayout.addWidget(self.txtPicker, 2, 1, 1, 3)
+        editorLayout.addWidget(colorPreviewWidget, 2, 0, 1, 4)
+        editorLayout.addWidget(QLabel("Texture:"), 3, 0)
+        editorLayout.addWidget(self.txtPicker, 3, 1, 1, 3)
         editorLayout.addWidget(self.colorWidget, 4, 0, 1, 4)
+        editorLayout.addWidget(self.setBGColorBtn, 5, 0, 1, 2)
+        editorLayout.addWidget(self.setSubColorBtn, 5, 2, 1, 2)
         self.editorUI.setLayout(editorLayout)
 
         layout = QGridLayout()
@@ -171,8 +203,8 @@ class TextureEditor(EMModelEditor):
         self.vSlider.setEnabled(isGenModel)
 
         if isGenModel:
-            clr = self.model.getColors()[0]
-            qclr = QColor(clr[0], clr[1], clr[2])
+
+            qclr = self.currentSelectedColor
             self.rBox.setValue(qclr.red())
             self.rSlider.setValue(qclr.red())
             self.gBox.setValue(qclr.green())
@@ -186,9 +218,62 @@ class TextureEditor(EMModelEditor):
             self.vBox.setValue(qclr.value())
             self.vSlider.setValue(qclr.value())
 
+            self.updateBgColorPreview()
+            self.updateTxtColorPreview()
+            self.setCurrentColor()
+
         self.colorWidget.repaint()
         self.removeImageBtn.repaint()
-        self.previewWidget.update()
+        self.previewWidget.updateImage()
+        self.previewWidget.repaint()
+
+    def setCurrentColor(self):
+        palette = QPalette()
+        palette.setColor(QPalette.Background, self.currentSelectedColor)
+        self.currentColorPreview.setPalette(palette)
+        self.currentColorPreview.repaint()
+
+    def updateBgColorPreview(self):
+        palette = QPalette()
+        palette.setColor(QPalette.Background, self.model.getBgColor())
+        self.bgColorPreview.setPalette(palette)
+        self.bgColorPreview.repaint()
+
+    def updateTxtColorPreview(self):
+        palette = QPalette()
+        palette.setColor(QPalette.Background, self.model.getTexture(0)[1])
+        self.subColorPreview.setPalette(palette)
+        self.subColorPreview.repaint()
+
+    def rgbUpdated(self):
+        qclr = QColor(self.rSlider.value(),
+                      self.gSlider.value(),
+                      self.bSlider.value())
+        self.currentSelectedColor = qclr
+
+        self.hBox.setValue(qclr.hue())
+        self.hSlider.setValue(qclr.hue())
+        self.sBox.setValue(qclr.saturation())
+        self.sSlider.setValue(qclr.saturation())
+        self.vBox.setValue(qclr.value())
+        self.vSlider.setValue(qclr.value())
+
+        self.setCurrentColor()
+
+    def hsvUpdated(self):
+        qclr = QColor.fromHsv(self.hSlider.value(),
+                              self.sSlider.value(),
+                              self.vSlider.value())
+        self.currentSelectedColor = qclr
+
+        self.rBox.setValue(qclr.red())
+        self.rSlider.setValue(qclr.red())
+        self.gBox.setValue(qclr.green())
+        self.gSlider.setValue(qclr.green())
+        self.bBox.setValue(qclr.blue())
+        self.bSlider.setValue(qclr.blue())
+
+        self.setCurrentColor()
 
     def uploadImage(self):
         pass
@@ -197,52 +282,86 @@ class TextureEditor(EMModelEditor):
         pass
 
     def rUpdated(self, r):
-        color = self.model.getColors()[0]
-        self.model.setColor((r, color[1], color[2]), 0)
+        self.rBox.setValue(r)
+        self.rSlider.setValue(r)
+        self.rgbUpdated()
+        # color = self.model.getColors()[0]
+        # self.model.setColor((r, color[1], color[2]), 0)
 
     def gUpdated(self, g):
-        color = self.model.getColors()[0]
-        self.model.setColor((color[0], g, color[2]), 0)
+        self.gBox.setValue(g)
+        self.gSlider.setValue(g)
+        self.rgbUpdated()
+        # color = self.model.getColors()[0]
+        # self.model.setColor((color[0], g, color[2]), 0)
 
     def bUpdated(self, b):
-        color = self.model.getColors()[0]
-        self.model.setColor((color[0], color[1], b), 0)
+        self.bBox.setValue(b)
+        self.bSlider.setValue(b)
+        self.rgbUpdated()
+        # color = self.model.getColors()[0]
+        # self.model.setColor((color[0], color[1], b), 0)
 
     def hUpdated(self, h):
-        color = self.model.getColors()[0]
-        qc = QColor(color[0], color[1], color[2])
-        uqc = QColor.fromHsv(h, qc.saturation(), qc.value())
-        self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
+        self.hBox.setValue(h)
+        self.hSlider.setValue(h)
+        self.hsvUpdated()
+
+        # color = self.model.getColors()[0]
+        # qc = QColor(color[0], color[1], color[2])
+        # uqc = QColor.fromHsv(h, qc.saturation(), qc.value())
+        # self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
 
     def sUpdated(self, s):
-        color = self.model.getColors()[0]
-        qc = QColor(color[0], color[1], color[2])
-        uqc = QColor.fromHsv(qc.hue(), s, qc.value())
-        self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
+        self.sBox.setValue(s)
+        self.sSlider.setValue(s)
+        self.hsvUpdated()
+
+        # color = self.model.getColors()[0]
+        # qc = QColor(color[0], color[1], color[2])
+        # uqc = QColor.fromHsv(qc.hue(), s, qc.value())
+        # self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
 
     def vUpdated(self, v):
-        color = self.model.getColors()[0]
-        qc = QColor(color[0], color[1], color[2])
-        uqc = QColor.fromHsv(qc.hue(), qc.saturation(), v)
-        self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
+        self.vBox.setValue(v)
+        self.vSlider.setValue(v)
+        self.hsvUpdated()
+
+        # color = self.model.getColors()[0]
+        # qc = QColor(color[0], color[1], color[2])
+        # uqc = QColor.fromHsv(qc.hue(), qc.saturation(), v)
+        # self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
 
     def genTxtUpdate(self, v):
-        self.model.setTexture(self.txtPicker.currentText())
+        self.model.setTextureType(self.txtPicker.currentText(), 0)
+
+    def setBgColor(self):
+        self.model.setBgColor(QColor(self.currentSelectedColor))
+
+    def setSubColor(self):
+        self.model.setTextureColor(QColor(self.currentSelectedColor), 0)
 
 
 class TexturePreview(EMModelGraphics):
     def __init__(self, model):
         super(TexturePreview, self).__init__(model, 1, 1, 216, 216, 216)
+        self.generatedImage = None
+
+    def updateImage(self):
+        self.generatedImage = EMImageGenerator.genImageFromModel(self.model)
 
     def paintEvent(self, paintEvent):
-        pass
-        if self.model is not None:
+        # if self.model is not None:
+        #     painter.setPen(Qt.NoPen)
+        #     painter.setBrush(self.model.getBgColor())
+        #     painter.drawRect(0, 0, 216, 216)
+        # EMImageGenerator.drawGeneratedTexture(painter, self.model)
+        if self.generatedImage is not None:
             painter = QPainter(self)
-        image = EMImageGenerator.genImageFromModel(self.model)
-        if image is not None:
-            # painter.setBrush(QBrush(image))
-            # painter.setPen(Qt.NoPen)
-            painter.drawImage(0, 0, image, 0, 0, self.width, self.height)
+            painter.drawImage(0, 0, self.generatedImage, 0, 0,
+                              self.width, self.height)
+
+            painter.end()
 
 
 def main():

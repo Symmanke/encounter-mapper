@@ -390,7 +390,7 @@ class EMImageGenerator():
         if isinstance(model, MapModel):
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
-                              QImage.Format_RGB32)
+                              QImage.Format_ARGB32)
             painter = QPainter(genImage)
             cls.drawTileGroup(painter, model)
             if "drawGrid" in displayOptions:
@@ -399,11 +399,11 @@ class EMImageGenerator():
         elif isinstance(model, GroupModel):
             genImage = QImage(216 * model.getNumCols(),
                               216 * model.getNumRows(),
-                              QImage.Format_RGB32)
+                              QImage.Format_ARGB32)
             painter = QPainter(genImage)
             cls.drawTileGroup(painter, model)
         elif isinstance(model, TileModel):
-            genImage = QImage(216, 216, QImage.Format_RGB32)
+            genImage = QImage(216, 216, QImage.Format_ARGB32)
             painter = QPainter(genImage)
             cls.drawTile(painter, model)
             if "transformOptions" in displayOptions:
@@ -412,14 +412,15 @@ class EMImageGenerator():
             if "drawGrid" in displayOptions:
                 cls.drawGrid(painter, 1, 1)
         elif isinstance(model, ImageTextureModel):
-            genImage = QImage(648, 648, QImage.Format_RGB32)
+            genImage = QImage(648, 648, QImage.Format_ARGB32)
             painter = QPainter(genImage)
             pass
         elif isinstance(model, GeneratedTextureModel):
-            genImage = QImage(648, 648, QImage.Format_RGB32)
+            genImage = QImage(648, 648, QImage.Format_ARGB32)
+            genImage.fill(QColor(0, 0, 0, 0))
             painter = QPainter(genImage)
             cls.drawGeneratedTexture(painter, model)
-            pass
+            painter.end()
         else:
             print("Wrong Model")
         return genImage
@@ -551,37 +552,43 @@ class EMImageGenerator():
     @classmethod
     def drawGeneratedTexture(cls, painter, model):
         """draw a 648*648 square of texture"""
-        bgColor = model.getColors()[0]
+        bgColor = model.getBgColor()
         painter.setPen(Qt.NoPen)
-        # painter.setBrush(QColor(bgColor[0], bgColor[1], bgColor[2]))
-        painter.setBrush(QColor(Qt.white))
+        painter.setBrush(Qt.white)
         painter.drawRect(0, 0, 648, 648)
-        txtName = model.getTexture()
-        if txtName != "None":
-            if txtName not in cls.textureCache:
-                # Attempt to load texture
-                cls.loadTexture(txtName)
-        # Add the texture if applicable
-            texture = cls.textureCache[txtName]
-            if texture is not None:
-                # Colorize Texture first
-                # effect = QGraphicsColorizeEffect(texture)
-                # texture.setGraphicsEffect(effect)
-                txtCopy = cls.setImageColor(
-                    texture, QColor(bgColor[0], bgColor[1], bgColor[2]))
-                painter.drawImage(0, 0, txtCopy,
-                                  0, 0, 648, 648)
+        painter.setBrush(bgColor)
+        # painter.setBrush(QColor(Qt.white))
+        painter.drawRect(0, 0, 648, 648)
+        for textureTupe in model.getTextures():
+            txtName = textureTupe[0]
+            if txtName != "None":
+                if txtName not in cls.textureCache:
+                    # Attempt to load texture
+                    cls.loadTexture(txtName)
+            # Add the texture if applicable
+                texture = cls.textureCache[txtName]
+                if texture is not None:
+                    # Colorize Texture first
+                    # effect = QGraphicsColorizeEffect(texture)
+                    # texture.setGraphicsEffect(effect)
+                    txtCopy = cls.setImageColor(
+                        texture, textureTupe[1])
+                    painter.drawImage(0, 0, txtCopy,
+                                      0, 0, 648, 648)
 
     @classmethod
     def setImageColor(cls, img, color):
         """Set an image to a single color while preserving the alpha"""
-        img = img.copy()
+        img = QImage(img)
+        modifiedImg = None
+        # return img
+
         red = color.red()
         green = color.green()
         blue = color.blue()
-        bits = img.constBits()
+        bits = img.bits()
         bits.setsize(img.byteCount())
-
+        #
         arr = numpy.array(bits).reshape(img.height(), img.width(), 4)
         for line in arr:
             for pix in line:
@@ -589,17 +596,8 @@ class EMImageGenerator():
                 pix[1] = green
                 pix[2] = red
         modifiedImg = QImage(arr, img.width(),
-                             img.height(), QImage.Format_RGB32)
+                             img.height(), QImage.Format_ARGB32)
         return modifiedImg
-
-        # for i in range(0, len(bits), 4):
-        #     bits[i] = red
-        #     bits[i+1] = green
-        #     bits[i+2] = blue
-        # print(int(len(bits)/4))
-        # data = bits.asstring()
-        # print(bits[0])
-        # print(len(data))
 
     @classmethod
     def transformImage(cls, img, options=(0, False, False)):

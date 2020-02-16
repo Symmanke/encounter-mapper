@@ -604,13 +604,28 @@ class GeneratedTextureModel(TextureModel):
     def __init__(self, name="", colors=None, texture="None", tags="", uid=-1):
         super(GeneratedTextureModel, self).__init__(
             name, TextureModel.GeneratedTexture, tags, uid)
-        self.colors = [(255, 255, 255)] if colors is None else colors
-        self.texture = texture
+        self.bgColor = None
+        self.textures = None
+        if colors is None:
+            self.bgColor = QColor(255, 255, 255)
+            self.textures = [["None", QColor(255, 255, 255)],
+                             ["None", QColor(255, 255, 255)]]
+        else:
+            bgTupe = colors["BG"]
+            self.bgColor = QColor(bgTupe[0], bgTupe[1], bgTupe[2])
+            self.textures = []
+            for texture in colors["Textures"]:
+                txtClr = QColor(255, 255, 255)
+                if texture[1] is not None:
+                    txtTupe = texture[1]
+                    txtClr = QColor(txtTupe[0], txtTupe[1], txtTupe[2])
+                self.textures.append(texture[0], txtClr)
 
     @classmethod
     def createModelJS(cls, jsonObj):
         jsmodel = None
         if jsonObj["textureType"] == TextureModel.GeneratedTexture:
+
             jsmodel = cls(jsonObj["name"], jsonObj["colors"],
                           jsonObj["texture"], jsonObj["tags"], jsonObj["uid"])
         return jsmodel
@@ -623,23 +638,31 @@ class GeneratedTextureModel(TextureModel):
                         model.getTags(), model.getUid())
         return mcopy
 
-    def setAllColors(self, colors):
-        self.colors = colors
+    def setBgColor(self, color):
+        self.bgColor = color
         self.modelUpdated.emit()
 
-    def setColor(self, color, index):
-        self.colors[index] = color
-        self.modelUpdated.emit()
+    def getBgColor(self):
+        return self.bgColor
 
     def getColors(self):
-        return self.colors
+        return (self.bgColor,
+                self.textures[0],
+                self.textures[1])
 
-    def setTexture(self, texture):
-        self.texture = texture
+    def setTextureType(self, texture, index):
+        self.textures[index][0] = texture
         self.modelUpdated.emit()
 
-    def getTexture(self):
-        return self.texture
+    def setTextureColor(self, color, index):
+        self.textures[index][1] = color
+        self.modelUpdated.emit()
+
+    def getTextures(self):
+        return self.textures
+
+    def getTexture(self, index):
+        return self.textures[index]
 
     def jsonObj(self):
         return {
