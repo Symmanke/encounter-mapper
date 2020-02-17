@@ -601,40 +601,39 @@ class TextureModel(EMModel):
 
 
 class GeneratedTextureModel(TextureModel):
-    def __init__(self, name="", colors=None, texture="None", tags="", uid=-1):
+    def __init__(self, name="New Texture", bgColor=None,
+                 textures=None, tags="", uid=-1):
         super(GeneratedTextureModel, self).__init__(
             name, TextureModel.GeneratedTexture, tags, uid)
-        self.bgColor = None
-        self.textures = None
-        if colors is None:
-            self.bgColor = QColor(255, 255, 255)
-            self.textures = [["None", QColor(255, 255, 255)],
-                             ["None", QColor(255, 255, 255)]]
-        else:
-            bgTupe = colors["BG"]
-            self.bgColor = QColor(bgTupe[0], bgTupe[1], bgTupe[2])
-            self.textures = []
-            for texture in colors["Textures"]:
-                txtClr = QColor(255, 255, 255)
-                if texture[1] is not None:
-                    txtTupe = texture[1]
-                    txtClr = QColor(txtTupe[0], txtTupe[1], txtTupe[2])
-                self.textures.append(texture[0], txtClr)
+        self.bgColor = QColor(255, 255, 255) if bgColor is None else bgColor
+        self.textures = textures
+        if textures is None:
+            self.textures = [["None", QColor(0, 0, 0)],
+                             ["None", QColor(0, 0, 0)]]
 
     @classmethod
     def createModelJS(cls, jsonObj):
         jsmodel = None
         if jsonObj["textureType"] == TextureModel.GeneratedTexture:
-
-            jsmodel = cls(jsonObj["name"], jsonObj["colors"],
-                          jsonObj["texture"], jsonObj["tags"], jsonObj["uid"])
+            txt = []
+            for txtTupe in jsonObj["textures"]:
+                txt.append([txtTupe[0], QColor(txtTupe[1][0],
+                                               txtTupe[1][1], txtTupe[1][2])])
+            bgTupe = jsonObj["bgColor"]
+            bg = QColor(bgTupe[0], bgTupe[1], bgTupe[2])
+            jsmodel = cls(jsonObj["name"], bg,
+                          txt, jsonObj["tags"], jsonObj["uid"])
         return jsmodel
 
     @classmethod
     def createModelCopy(cls, model):
         mcopy = None
         if isinstance(model, GeneratedTextureModel):
-            mcopy = cls(model.getName(), model.getColors(), model.getTexture(),
+            txt = []
+            for txtTupe in model.getTextures():
+                txt.append([txtTupe[0], QColor(txtTupe[1])])
+            bg = QColor(model.getBgColor())
+            mcopy = cls(model.getName(), bg, txt,
                         model.getTags(), model.getUid())
         return mcopy
 
@@ -644,11 +643,6 @@ class GeneratedTextureModel(TextureModel):
 
     def getBgColor(self):
         return self.bgColor
-
-    def getColors(self):
-        return (self.bgColor,
-                self.textures[0],
-                self.textures[1])
 
     def setTextureType(self, texture, index):
         self.textures[index][0] = texture
@@ -665,12 +659,19 @@ class GeneratedTextureModel(TextureModel):
         return self.textures[index]
 
     def jsonObj(self):
+        txt = []
+        for txtTupe in self.textures:
+            txt.append(
+                txtTupe[0],
+                (txtTupe[1].red(), txtTupe[1].green(), txtTupe[1].blue()))
+        bg = (self.bgColor.red(), self.bgColor.green(), self.bgColor.blue())
+
         return {
             "textureType": TextureModel.GeneratedTexture,
             "name": self.name,
             "tags": self.tags,
-            "texture": self.texture,
-            "colors": self.colors,
+            "textures": txt,
+            "bgColor": bg,
             "uid": self.uid
         }
 

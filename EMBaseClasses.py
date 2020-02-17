@@ -252,6 +252,7 @@ class EMModelEditor(EMEditor):
         if self.model is not None:
             self.model.modelUpdated.connect(self.updateUI)
         self.modelNameEdit = QLineEdit()
+        self.modelNameEdit.setText(self.model.getName())
         self.modelNameEdit.textChanged.connect(self.updateModelName)
         self.modelTagsEdit = QLineEdit()
         self.modelNameEdit.textChanged.connect(self.updateModelTags)

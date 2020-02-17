@@ -52,6 +52,9 @@ class ModelManager():
     GSTextureName = "TxtImage"
     PaletteName = "Palette"
 
+    TextureNames = ("None", "Tile", "Checkerboard", "Grass", "Wood",
+                    "Cobblestone", "Water", "Lava_1", "Lava_2", "Gradient")
+
     List = "List"
     ByUid = "ByUid"
     ByTag = "ByTag"

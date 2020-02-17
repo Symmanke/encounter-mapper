@@ -23,11 +23,11 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor, QPalette
 from PyQt5.QtWidgets import (QWidget, QPushButton, QSpinBox, QSlider,
                              QApplication, QGridLayout, QLabel, QComboBox,
-                             QHBoxLayout)
+                             QHBoxLayout, QRadioButton)
 
 from EMBaseClasses import EMModelEditor, EMModelGraphics
 from EMModel import GeneratedTextureModel
-from EMHelper import EMImageGenerator
+from EMHelper import EMImageGenerator, ModelManager
 
 
 class TextureEditor(EMModelEditor):
@@ -46,10 +46,8 @@ class TextureEditor(EMModelEditor):
 
         # Pick the Grayscale Textures
         self.txtPicker = QComboBox()
-        self.txtPicker.addItem("None")
-        self.txtPicker.addItem("Tile")
-        self.txtPicker.addItem("Grass")
-        self.txtPicker.addItem("Wood")
+        for txtName in ModelManager.TextureNames:
+            self.txtPicker.addItem(txtName)
         self.txtPicker.currentIndexChanged.connect(self.genTxtUpdate)
 
         initialColor = Qt.white
@@ -74,6 +72,15 @@ class TextureEditor(EMModelEditor):
         self.subColorPreview.setMinimumHeight(50)
         self.subColorPreview.setAutoFillBackground(True)
         self.subColorLabel = QLabel("Txt 1")
+
+        self.subRadio1 = QRadioButton("Texture 1")
+        self.subRadio1.setChecked(True)
+        self.subRadio1.toggled.connect(
+            lambda: self.toggleSelectedTexture(self.subRadio1))
+        self.subRadio2 = QRadioButton("Texture 2")
+        self.subRadio2.toggled.connect(
+            lambda: self.toggleSelectedTexture(self.subRadio2))
+        self.txtToEdit = 0
 
         colorPreviewLayout = QGridLayout()
         colorPreviewLayout.addWidget(self.bgColorPreview, 0, 0)
@@ -170,16 +177,20 @@ class TextureEditor(EMModelEditor):
         editorLayout.addWidget(self.uploadImageBtn, 1, 0, 1, 2)
         editorLayout.addWidget(self.removeImageBtn, 1, 2, 1, 2)
         editorLayout.addWidget(colorPreviewWidget, 2, 0, 1, 4)
-        editorLayout.addWidget(QLabel("Texture:"), 3, 0)
-        editorLayout.addWidget(self.txtPicker, 3, 1, 1, 3)
-        editorLayout.addWidget(self.colorWidget, 4, 0, 1, 4)
-        editorLayout.addWidget(self.setBGColorBtn, 5, 0, 1, 2)
-        editorLayout.addWidget(self.setSubColorBtn, 5, 2, 1, 2)
+        editorLayout.addWidget(self.subRadio1, 3, 0, 1, 2)
+        editorLayout.addWidget(self.subRadio2, 3, 2, 1, 2)
+        editorLayout.addWidget(QLabel("Texture:"), 4, 0)
+        editorLayout.addWidget(self.txtPicker, 4, 1, 1, 3)
+        editorLayout.addWidget(self.colorWidget, 5, 0, 1, 4)
+        editorLayout.addWidget(self.setBGColorBtn, 6, 0, 1, 2)
+        editorLayout.addWidget(self.setSubColorBtn, 6, 2, 1, 2)
         self.editorUI.setLayout(editorLayout)
 
         layout = QGridLayout()
         layout.addWidget(self.previewWidget, 0, 0)
         layout.addWidget(self.editorUI, 0, 1)
+        layout.addWidget(self.applyBtn, 1, 0)
+        layout.addWidget(self.cancelBtn, 1, 1)
 
         self.setLayout(layout)
         self.updateUI()
@@ -227,6 +238,21 @@ class TextureEditor(EMModelEditor):
         self.previewWidget.updateImage()
         self.previewWidget.repaint()
 
+    def toggleSelectedTexture(self, btn):
+        # Check if btn is selected for the thing
+        if btn.isChecked():
+            if self.subRadio1.isChecked():
+                self.txtToEdit = 0
+                self.subColorLabel.setText("Txt 1")
+            else:
+                self.txtToEdit = 1
+                self.subColorLabel.setText("Txt 2")
+        self.updateTxtColorPreview()
+
+        switchIndex = self.txtPicker.findText(
+            self.model.getTexture(self.txtToEdit)[0])
+        self.txtPicker.setCurrentIndex(switchIndex)
+
     def setCurrentColor(self):
         palette = QPalette()
         palette.setColor(QPalette.Background, self.currentSelectedColor)
@@ -241,7 +267,8 @@ class TextureEditor(EMModelEditor):
 
     def updateTxtColorPreview(self):
         palette = QPalette()
-        palette.setColor(QPalette.Background, self.model.getTexture(0)[1])
+        palette.setColor(QPalette.Background,
+                         self.model.getTexture(self.txtToEdit)[1])
         self.subColorPreview.setPalette(palette)
         self.subColorPreview.repaint()
 
@@ -333,13 +360,15 @@ class TextureEditor(EMModelEditor):
         # self.model.setColor((uqc.red(), uqc.green(), uqc.blue()), 0)
 
     def genTxtUpdate(self, v):
-        self.model.setTextureType(self.txtPicker.currentText(), 0)
+        self.model.setTextureType(self.txtPicker.currentText(),
+                                  self.txtToEdit)
 
     def setBgColor(self):
         self.model.setBgColor(QColor(self.currentSelectedColor))
 
     def setSubColor(self):
-        self.model.setTextureColor(QColor(self.currentSelectedColor), 0)
+        self.model.setTextureColor(QColor(self.currentSelectedColor),
+                                   self.txtToEdit)
 
 
 class TexturePreview(EMModelGraphics):
@@ -351,11 +380,6 @@ class TexturePreview(EMModelGraphics):
         self.generatedImage = EMImageGenerator.genImageFromModel(self.model)
 
     def paintEvent(self, paintEvent):
-        # if self.model is not None:
-        #     painter.setPen(Qt.NoPen)
-        #     painter.setBrush(self.model.getBgColor())
-        #     painter.drawRect(0, 0, 216, 216)
-        # EMImageGenerator.drawGeneratedTexture(painter, self.model)
         if self.generatedImage is not None:
             painter = QPainter(self)
             painter.drawImage(0, 0, self.generatedImage, 0, 0,
