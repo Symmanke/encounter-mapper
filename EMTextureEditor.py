@@ -372,9 +372,13 @@ class TextureEditor(EMModelEditor):
 
 
 class TexturePreview(EMModelGraphics):
-    def __init__(self, model):
-        super(TexturePreview, self).__init__(model, 1, 1, 216, 216, 216)
-        self.generatedImage = None
+    def __init__(self, model, width=216, height=216):
+        super(TexturePreview, self).__init__(model, 1, 1, 216, width, height)
+        self.generatedImage = EMImageGenerator.genImageFromModel(model)
+
+    @classmethod
+    def previewWidget(cls, model):
+        return cls(model, 50, 50)
 
     def updateImage(self):
         self.generatedImage = EMImageGenerator.genImageFromModel(self.model)

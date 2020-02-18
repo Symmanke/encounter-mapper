@@ -22,13 +22,14 @@ If not, see <https://www.gnu.org/licenses/>.
 from PyQt5.QtCore import (Qt, pyqtSignal)
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QHBoxLayout,  QLabel,
-                             QPushButton, QSpinBox, QWidget, QComboBox,
+                             QPushButton, QSpinBox, QWidget,
                              QListWidget, QDialog, QVBoxLayout)
 
 from EMPaletteEditor import EMPaletteEditor
-from EMModel import TileModel
-from EMBaseClasses import EMModelEditor, EMModelGraphics
-from EMHelper import EMImageGenerator
+from EMModel import TileModel, GeneratedTextureModel
+from EMBaseClasses import EMModelEditor, EMModelGraphics, EMModelPicker
+from EMHelper import EMImageGenerator, ModelManager
+from EMTextureEditor import TextureEditor, TexturePreview
 
 
 class TileEditor(EMModelEditor):
@@ -45,11 +46,23 @@ class TileEditor(EMModelEditor):
     cancelModel = pyqtSignal()
 
     def __init__(self, model=None):
+
         super(TileEditor, self).__init__(model)
         layout = QGridLayout()
+        self.selectedShape = -1
+        self.selectedPoint = -1
+        self.selectedTexture = -1
         self.previewWidget = TilePreviewWidget()
-        self.tilePointList = QListWidget()
-        self.tilePointList.itemClicked.connect(self.updateCurrentItem)
+        self.previewWidget.pointSelected.connect(self.setSelectedPoint)
+
+        self.textureList = EMModelPicker(
+            ModelManager.TextureName, GeneratedTextureModel,
+            TextureEditor, TexturePreview)
+        self.textureList.selectedModel.connect(self.setSelectedTexture)
+        self.shapeList = QListWidget()
+        self.shapeList.itemClicked.connect(self.shapeClicked)
+        self.shapePointList = QListWidget()
+        self.shapePointList.itemClicked.connect(self.pointClicked)
         self.pointXEdit = QSpinBox()
         self.pointXEdit.setMaximum(100)
         self.pointXEdit.setMinimum(0)
@@ -81,14 +94,14 @@ class TileEditor(EMModelEditor):
         self.downPointBtn.clicked.connect(self.moveDownPoint)
 
         self.shapeTextureBtn = QPushButton("Set Shape Texture")
-        self.shapeTextureBtn.clicked.connect(self.setFGColor)
+        self.shapeTextureBtn.clicked.connect(self.setCurShapeTexture)
         self.bgTextureBtn = QPushButton("Set BG Texture")
-        self.bgTextureBtn.clicked.connect(self.setBGColor)
+        self.bgTextureBtn.clicked.connect(self.setBgTexture)
 
         self.buttonHolder = QWidget()
         bhLayout = QGridLayout()
-        bhLayout.addWidget(self.addShapeBtn, 0, 0, 1, 3)
-        bhLayout.addWidget(self.delShapeBtn, 0, 3, 1, 3)
+        # bhLayout.addWidget(self.addShapeBtn, 0, 0, 1, 3)
+        # bhLayout.addWidget(self.delShapeBtn, 0, 3, 1, 3)
         bhLayout.addWidget(self.addPointBtn, 1, 0, 1, 3)
         bhLayout.addWidget(self.delPointBtn, 1, 3, 1, 3)
         bhLayout.addWidget(self.upPointBtn, 2, 0, 1, 3)
@@ -108,7 +121,10 @@ class TileEditor(EMModelEditor):
         layout.addWidget(self.pointXEdit, 1, 2)
         layout.addWidget(QLabel("Y:"), 1, 3)
         layout.addWidget(self.pointYEdit, 1, 4)
-        layout.addWidget(self.tilePointList, 2, 1, 4, 3)
+        layout.addWidget(self.shapeList, 2, 1, 2, 2)
+        layout.addWidget(self.shapePointList, 2, 3, 4, 2)
+        layout.addWidget(self.addShapeBtn, 4, 1, 1, 2)
+        layout.addWidget(self.delShapeBtn, 5, 1, 1, 2)
         layout.addWidget(self.buttonHolder, 6, 1, 1, 4)
 
         # buttons to add fhe model
@@ -119,6 +135,8 @@ class TileEditor(EMModelEditor):
         acbtn.setLayout(hbox)
         layout.addWidget(acbtn, 7, 0, 1, 5)
 
+        layout.addWidget(self.textureList, 0, 5, 8, 1)
+
         self.setLayout(layout)
         self.previewWidget.setModel(self.model)
         self.updateUI()
@@ -127,8 +145,10 @@ class TileEditor(EMModelEditor):
         self.model.addShape()
 
     def addPoint(self):
-        self.model.addPoint(self.pointXEdit.value(),
-                            self.pointYEdit.value())
+        if self.selectedShape > -1:
+            self.model.addPoint(self.selectedShape, self.selectedPoint,
+                                self.pointXEdit.value(),
+                                self.pointYEdit.value())
 
     def deletePoint(self):
         self.model.deleteSelectedPoint()
@@ -146,8 +166,8 @@ class TileEditor(EMModelEditor):
         self.model.swapPointSelected(swap)
 
     def updatePointPosition(self):
-        index = self.tilePointList.currentRow()
-        self.model.updatePoint(0, index, self.pointXEdit.value(),
+        self.model.updatePoint(self.selectedShape, self.selectedPoint,
+                               self.pointXEdit.value(),
                                self.pointYEdit.value())
 
     def rotCW(self):
@@ -177,11 +197,34 @@ class TileEditor(EMModelEditor):
         self.paletteDialog.exec_()
         # self.paletteEditor.show()
 
-    def updateBGTexture(self):
-        self.model.setBGTexture(self.bgTextureBox.currentText())
+    def shapeClicked(self):
+        self.setSelectedShape(self.shapeList.currentRow())
 
-    def updateFGTexture(self):
-        self.model.setFGTexture(self.fgTextureBox.currentText())
+    def pointClicked(self):
+        self.setSelectedPoint(self.shapePointList.currentRow())
+
+    def setSelectedShape(self, index):
+        self.selectedShape = index
+        self.selectedPoint = -1
+        self.previewWidget.setSelectedShape(index)
+        self.previewWidget.setSelectedPoint(-1)
+        self.updateUI()
+
+    def setSelectedPoint(self, index):
+        self.selectedPoint = index
+        self.previewWidget.setSelectedPoint(index)
+        self.updateUI()
+
+    def setSelectedTexture(self, txtUid):
+        self.selectedTexture = txtUid
+
+    def setCurShapeTexture(self):
+        if self.selectedTexture > -1:
+            self.model.setShapeTexture(self.selectedShape, self.selectedTexture)
+
+    def setBgTexture(self):
+        if self.selectedTexture > -1:
+            self.model.setBgTexture(self.selectedTexture)
 
     def setBGColor(self):
         bg = self.model.getFgColor()
@@ -221,33 +264,39 @@ class TileEditor(EMModelEditor):
         self.updateUI()
 
     def updateCurrentItem(self):
-        self.model.setSelectedIndex(self.tilePointList.currentRow())
+        self.model.setSelectedIndex(self.shapePointList.currentRow())
 
     def updateUI(self):
-        self.reloadPointList()
+        self.reloadLists()
         self.previewWidget.repaint()
         self.updateCurrentValues()
         self.modelNameEdit.setText(self.model.getName())
         # self.enableButtons()
 
-    def reloadPointList(self):
-        self.tilePointList.clear()
+    def reloadLists(self):
+        self.shapeList.clear()
+        self.shapePointList.clear()
         shapes = self.model.getShapes()
         for i in range(len(shapes)):
-            self.tilePointList.addItem("<Shape {}>".format(i+1))
-            shapePoints = shapes[i][1]
-            for j in range(len(shapePoints)):
-                point = shapePoints[j]
-                self.tilePointList.addItem("-{}. ({}, {})"
-                                           .format(j+1, point[0], point[1]))
+            self.shapeList.addItem("Shape {}".format(i+1))
+
+        if self.selectedShape > -1:
+            shapePoints = shapes[self.selectedShape][1]
+            for i in range(len(shapePoints)):
+                point = shapePoints[i]
+                self.shapePointList.addItem("{}. ({}, {})"
+                                            .format(i+1, point[0], point[1]))
+            self.shapeList.setCurrentRow(self.selectedShape)
+            if self.selectedPoint > -1:
+                self.shapePointList.setCurrentRow(self.selectedPoint)
 
         # TODO
-        # self.tilePointList.setCurrentRow(self.model.getSelectedIndex())
+        # self.shapePointList.setCurrentRow(self.model.getSelectedIndex())
 
     def updateCurrentValues(self):
-        currentIndex = self.model.getSelectedIndex()
-        if(currentIndex != -1):
-            point = self.model.getPoints()[currentIndex]
+        if self.selectedShape > -1 and self.selectedPoint > -1:
+            point = (self.model.getShape(self.selectedShape)[1]
+                     [self.selectedPoint])
             self.pointXEdit.setValue(point[0])
             self.pointYEdit.setValue(point[1])
         else:
@@ -283,6 +332,8 @@ class TilePreviewWidget(EMModelGraphics):
                                                 tileSize + (border * 2),
                                                 preview)
         self.binkedPoint = False
+        self.selectedShape = -1
+        self.selectedPoint = -1
 
     # Class method for constructing different ones
     @classmethod
@@ -291,6 +342,12 @@ class TilePreviewWidget(EMModelGraphics):
 
     def setModel(self, model):
         self.model = model
+
+    def setSelectedShape(self, shape):
+        self.selectedShape = shape
+
+    def setSelectedPoint(self, point):
+        self.selectedPoint = point
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
@@ -303,27 +360,28 @@ class TilePreviewWidget(EMModelGraphics):
                               self.modelImage.scaled(
                                   self.tileSize, self.tileSize))
             EMImageGenerator.drawGrid(painter, 1, 1, 10, 10, self.tileSize)
+
             # self.drawTile(painter, 0, 0, self.model)
-            # if not self.preview:
-            #     points = self.model.generatePointOffset(
-            #         0, 0, self.tileSize, self.xOffset, self.yOffset)
-            #     self.drawPointObjects(painter, points)
+            if not self.preview and self.selectedShape > -1:
+                points = self.model.generateShapeOffset(
+                    self.selectedShape, 0, 0, self.tileSize,
+                    self.xOffset, self.yOffset)
+                self.drawPointObjects(painter, points)
 
     def drawPointObjects(self, painter, points):
         painter.setPen(Qt.black)
         r = 10
         d = 2*r
-        si = self.model.getSelectedIndex()
         for i in range(len(points)):
             point = points[i]
-            if i != si:
-                painter.setBrush(Qt.black)
+            if i != self.selectedPoint:
+                painter.setBrush(Qt.white)
                 painter.drawEllipse(point.x()-r, point.y()-r, d, d)
-        painter.setBrush(Qt.white)
+        painter.setBrush(Qt.red)
 
-        if si >= 0:
+        if self.selectedPoint >= 0:
             # draw white point at the end so it always shows up
-            selectedPoint = points[si]
+            selectedPoint = points[self.selectedPoint]
             painter.drawEllipse(selectedPoint.x()-r, selectedPoint.y()-r, d, d)
 
     def mousePressEvent(self, QMouseEvent):
@@ -332,17 +390,17 @@ class TilePreviewWidget(EMModelGraphics):
         else:
             mp = self.mousePosScale(QMouseEvent.pos())
             # check if selected one is clicked first
-            if self.model.getSelectedIndex() != -1:
-                if self.distanceHelper(
-                        mp, self.model.getSelectedPoint()) <= 100:
+            if self.selectedShape != -1:
+                shapePoints = self.model.getShape(self.selectedShape)[1]
+                if self.selectedPoint > -1 and self.distanceHelper(
+                        mp, shapePoints[self.selectedPoint]) <= 100:
                     self.binkedPoint = True
                 else:
-                    points = self.model.getPoints()
-                    for i in range(len(points)):
-                        point = points[i]
+                    for i in range(len(shapePoints)):
+                        point = shapePoints[i]
                         if self.distanceHelper(mp, point) <= 100:
                             self.binkedPoint = True
-                            self.model.setSelectedIndex(i)
+                            self.pointSelected.emit(i)
                             break
 
     def mouseMoveEvent(self, QMouseEvent):
@@ -351,7 +409,9 @@ class TilePreviewWidget(EMModelGraphics):
         else:
             if self.binkedPoint:
                 mp = self.mousePosScale(QMouseEvent.pos())
-                self.model.setSelectedPoint(mp[0], mp[1])
+                print("updating shape {}".format(self.selectedShape))
+                self.model.updatePoint(self.selectedShape, self.selectedPoint,
+                                       mp[0], mp[1])
 
     def mouseReleaseEvent(self, QMouseEvent):
         if self.preview:

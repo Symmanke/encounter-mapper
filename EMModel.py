@@ -101,48 +101,31 @@ class TileModel(EMModel):
 
     @classmethod
     def createModelCopy(cls, model):
-        bg = model.getBgColor()
-        fg = model.getFgColor()
-        mcopy = cls(model.getName(), model.getPoints(),
-                    (fg.red(), fg.green(), fg.blue()),
-                    (bg.red(), bg.green(), bg.blue(), model.getBgTexture()),
+        mcopy = cls(model.getName(), model.getShapes, model.getBgTexture(),
                     model.getUid())
         return mcopy
 
     @classmethod
     def createModelJS(cls, modelJS):
-        fg = modelJS["fg"]
-        bg = modelJS["bg"]
-        text = "None" if "bgTexture" not in modelJS else modelJS["bgTexture"]
-        model = cls(modelJS["name"], modelJS["points"][0],
-                    (fg["r"], fg["g"], fg["b"]),
-                    (bg["r"], bg["g"], bg["b"], text),
-                    modelJS["uid"])
+        model = cls(modelJS["name"], modelJS["shapeList"],
+                    modelJS["bgTexture"], modelJS["uid"])
         return model
 
-    def setBgColor(self, r, g, b):
-        self.bgColor = QColor(r, g, b)
-
-    def setFgColor(self, r, g, b):
-        self.fgColor = QColor(r, g, b)
-
-    def setBGTexture(self, texture):
+    def setBgTexture(self, texture):
         self.bgTexture = texture
         self.modelUpdated.emit()
 
-    def setFGTexture(self, texture):
-        self.fgTexture = texture
-        self.modelUpdated.emit()
-
     def addShape(self):
-        self.shapeList.append([1, [(50, 50), (75, 50), (75, 75)]])
+        self.shapeList.append([1, []])
         self.modelUpdated.emit()
 
     def addPoint(self, shape, index, x, y):
+        index = max(0, index)
         self.shapeList[shape][1].insert(index, (x, y))
         self.modelUpdated.emit()
 
     def updatePoint(self, shape, index, x, y):
+        print("updating {},{}".format(shape, index))
         if shape >= 0 and shape < len(self.shapeList):
             if index >= 0 and index < len(self.shapeList[shape][1]):
                 self.shapeList[shape][1][index] = (x, y)
@@ -154,9 +137,6 @@ class TileModel(EMModel):
         self.bgColor = model.getBgColor()
         self.fgColor = model.getFgColor()
         self.modelUpdated.emit()
-
-    def deleteSelectedPoint(self):
-        self.deletePoint(self.selectedIndex)
 
     def deletePoint(self, index):
         del self.pointList[index]
@@ -184,16 +164,15 @@ class TileModel(EMModel):
     def getPoints(self):
         return self.pointList
 
+    def setShapeTexture(self, index, texture):
+        self.shapeList[index][0] = texture
+        self.modelUpdated.emit()
+
+    def getShape(self, index):
+        return self.shapeList[index]
+
     def getShapes(self):
         return self.shapeList
-
-    def getFgColor(self):
-        return self.fgColor
-        self.modelUpdated.emit()
-
-    def getBgColor(self):
-        return self.bgColor
-        self.modelUpdated.emit()
 
     def setSelectedIndex(self, index):
         self.selectedIndex = index
@@ -207,9 +186,6 @@ class TileModel(EMModel):
 
     def getBgTexture(self):
         return self.bgTexture
-
-    def getFgTexture(self):
-        return self.fgTexture
 
     def getNumPoints(self):
         return len(self.pointList)
@@ -286,19 +262,10 @@ class TileModel(EMModel):
 
         return {
             "name": self.name,
-            "points": [self.pointList],
             "uid": self.uid,
-            "fg": {
-                "r": self.fgColor.red(),
-                "g": self.fgColor.green(),
-                "b": self.fgColor.blue(),
-            },
-            "bg": {
-                "r": self.bgColor.red(),
-                "g": self.bgColor.green(),
-                "b": self.bgColor.blue(),
-            },
-            "bgTexture": self.bgTexture
+            "shapeList": self.shapeList,
+            "bgTexture": self.bgTexture,
+            "tags": ""
         }
 
 
@@ -675,9 +642,9 @@ class GeneratedTextureModel(TextureModel):
     def jsonObj(self):
         txt = []
         for txtTupe in self.textures:
-            txt.append(
+            txt.append((
                 txtTupe[0],
-                (txtTupe[1].red(), txtTupe[1].green(), txtTupe[1].blue()))
+                (txtTupe[1].red(), txtTupe[1].green(), txtTupe[1].blue())))
         bg = (self.bgColor.red(), self.bgColor.green(), self.bgColor.blue())
 
         return {
