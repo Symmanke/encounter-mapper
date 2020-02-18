@@ -26,7 +26,7 @@ import os
 import json
 import numpy
 from PyQt5.QtCore import Qt
-from EMModel import (TileModel, GroupModel, MapModel,
+from EMModel import (TileModel, GroupModel, MapModel, TextureModelLoader,
                      GeneratedTextureModel, ImageTextureModel)
 
 
@@ -90,6 +90,7 @@ class ModelManager():
             f = open(filePath, "r")
             if f.mode == "r":
                 contents = f.read()
+                print(contents)
                 jsContents = json.loads(contents)
                 f.close()
 
@@ -338,10 +339,11 @@ class EMImageGenerator():
     This happen to be the dimensions I use for my own custom tiles, and makes
     things easier for my personal use. In the future, I plan to allow this to
     be customized, although some user-created custom images may be required
-    at that time. hello there
+    at that time.
     """
 
     textureCache = {}
+    textureModelImages = {}
 
     GridPatternExport = (5, 3, 3)
     GridPatternStandard = (3, 1, 1)
@@ -461,40 +463,54 @@ class EMImageGenerator():
                  options=(0, False, False)):
         # Res = 3 in. at 72ppi. 72*3 = 216
         res = 216
-        bg = model.getBgColor()
-        painter.setPen(bg)
-        painter.setBrush(bg)
+        bgUid = model.getBgTexture()
+        bgTxt = cls.getTextureImage(bgUid)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(bgTxt))
         painter.drawRect(int(res * xind),
                          int(res * yind),
                          res, res)
-        # Add Background texture
-        txtName = model.getBgTexture()
-        if txtName != "None":
-            if txtName not in cls.textureCache:
-                # Attempt to load texture
-                cls.loadTexture(txtName)
-            texture = cls.textureCache[txtName]
-            if texture is not None:
-                painter.drawImage(res*xind, res*yind, texture,
-                                  res*(xind % 3), res*(yind % 3), 216, 216)
-        points = model.generatePointOffset(
-            xind, yind, res,
-            0, 0,
-            options[0], options[1], options[2])
-        fg = model.getFgColor()
-        painter.setBrush(fg)
-        painter.setPen(fg)
-        poly = QPolygon(points)
-        painter.drawPolygon(poly)
-        # FG Texture
-        fgTxtName = model.getFgTexture()
-        if fgTxtName != "None":
-            if fgTxtName not in cls.textureCache:
-                # Attempt to load texture
-                cls.loadTexture(fgTxtName)
-            painter.setBrush(QBrush(cls.textureCache[fgTxtName]))
-            painter.setPen(Qt.NoPen)
+
+        pointsForShapes = model.generateAllShapeOffset(
+            xind, yind, res, 0, 0, options[0], options[1], options[2])
+        shapes = model.getShapes()
+        for i in range(len(shapes)):
+            texture = cls.getTextureImage(shapes[i][0])
+            # painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(texture))
+            poly = QPolygon(pointsForShapes[i])
+            print(pointsForShapes[i])
             painter.drawPolygon(poly)
+
+        # Add Background texture
+        # bgTexture = model.getBgTexture()
+        # txtImg = cls.getTextureImage(bgTexture)
+        # if txtName != "None":
+        #     if txtName not in cls.textureCache:
+        #         # Attempt to load texture
+        #         cls.loadTexture(txtName)
+        #     texture = cls.textureCache[txtName]
+        #     if texture is not None:
+        #         painter.drawImage(res*xind, res*yind, texture,
+        #                           res*(xind % 3), res*(yind % 3), 216, 216)
+        # points = model.generatePointOffset(
+        #     xind, yind, res,
+        #     0, 0,
+        #     options[0], options[1], options[2])
+        # fg = model.getFgColor()
+        # painter.setBrush(fg)
+        # painter.setPen(fg)
+        # poly = QPolygon(points)
+        # painter.drawPolygon(poly)
+        # # FG Texture
+        # fgTxtName = model.getFgTexture()
+        # if fgTxtName != "None":
+        #     if fgTxtName not in cls.textureCache:
+        #         # Attempt to load texture
+        #         cls.loadTexture(fgTxtName)
+        #     painter.setBrush(QBrush(cls.textureCache[fgTxtName]))
+        #     painter.setPen(Qt.NoPen)
+        #     painter.drawPolygon(poly)
 
     @classmethod
     def drawEmptyTile(cls, painter, xInd, yInd):
@@ -609,6 +625,17 @@ class EMImageGenerator():
         tImage = tImage.transformed(QTransform().rotate(
             (90*options[0]) % 360))
         return tImage
+
+    @classmethod
+    def getTextureImage(cls, txtUid):
+        if len(cls.textureModelImages) == 0:
+            ModelManager.loadModelListFromFile(
+                ModelManager.TextureName, TextureModelLoader)
+        if txtUid not in cls.textureModelImages:
+            img = cls.genImageFromModel(
+                ModelManager.fetchByUid(ModelManager.TextureName, txtUid))
+            cls.textureModelImages[txtUid] = img
+        return cls.textureModelImages[txtUid]
 
     @classmethod
     def loadTexture(cls, txtName):

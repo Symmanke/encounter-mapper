@@ -85,23 +85,19 @@ class TileModel(EMModel):
     different textures to overlay on top of the BG.
     """
 
-    def __init__(self, name="new layer", pointList=None,
-                 fgTupe=None, bgTupe=None, uid=-1):
+    def __init__(self, name="new tile", shapeList=None, bgTexture=0, uid=-1):
         super(TileModel, self).__init__(name, "", uid)
-        self.name = name
-        self.pointList = []
-        if pointList is not None:
-            for point in pointList:
-                self.pointList.append((point[0], point[1]))
-        # self.pointList = [] if pointList is None else pointList
-        bg = (105, 141, 85) if bgTupe is None else bgTupe
-        fg = (101, 101, 102) if fgTupe is None else fgTupe
-        self.bgColor = QColor(bg[0], bg[1], bg[2])
-        self.fgColor = QColor(fg[0], fg[1], fg[2])
-        self.bgTexture = "None" if bgTupe is None else bgTupe[3]
-        self.fgTexture = "None"
-        self.selectedIndex = len(self.pointList) - 1
-        self.tags = []
+        self.shapeList = []
+        if shapeList is not None:
+            for shape in shapeList:
+                sh = [shape[0]]
+                shapePoints = []
+                for point in shape[1]:
+                    shapePoints.append((point[0], point[1]))
+                sh.append(shapePoints)
+                self.shapeList.append(sh)
+        self.bgTexture = bgTexture
+        self.selectedIndex = -1
 
     @classmethod
     def createModelCopy(cls, model):
@@ -138,22 +134,19 @@ class TileModel(EMModel):
         self.fgTexture = texture
         self.modelUpdated.emit()
 
-    def addPoint(self, x, y):
-        # if self.selectedIndex == -1:
-        #     self.pointList.append((x, y))
-        #     self.selectedIndex = len(self.pointList) - 1
-        # else:
-        self.pointList.insert(self.selectedIndex+1, (x, y))
-        self.selectedIndex += 1
+    def addShape(self):
+        self.shapeList.append([1, [(50, 50), (75, 50), (75, 75)]])
         self.modelUpdated.emit()
 
-    def setSelectedPoint(self, x, y):
-        self.updatePoint(self.selectedIndex, x, y)
+    def addPoint(self, shape, index, x, y):
+        self.shapeList[shape][1].insert(index, (x, y))
+        self.modelUpdated.emit()
 
-    def updatePoint(self, index, x, y):
-        if index >= 0 and index < len(self.pointList):
-            self.pointList[index] = (x, y)
-            self.modelUpdated.emit()
+    def updatePoint(self, shape, index, x, y):
+        if shape >= 0 and shape < len(self.shapeList):
+            if index >= 0 and index < len(self.shapeList[shape][1]):
+                self.shapeList[shape][1][index] = (x, y)
+                self.modelUpdated.emit()
 
     def updateModel(self, model):
         self.name = model.getName()
@@ -191,6 +184,9 @@ class TileModel(EMModel):
     def getPoints(self):
         return self.pointList
 
+    def getShapes(self):
+        return self.shapeList
+
     def getFgColor(self):
         return self.fgColor
         self.modelUpdated.emit()
@@ -218,16 +214,10 @@ class TileModel(EMModel):
     def getNumPoints(self):
         return len(self.pointList)
 
-    def generatePointOffset(self, xInd, yInd,
-                            scale=100, xOff=0, yOff=0,
-                            orientation=0, hflip=False,
-                            vflip=False):
-        tempPoints = []
-        scaleX = (xInd * scale) + xOff
-        scaleY = (yInd * scale) + yOff
-        pointScale = scale/100
-        for p in self.pointList:
-
+    def offsetShape(self, points, scaleX, scaleY, pointScale,
+                    orientation, hflip, vflip):
+        pointList = []
+        for p in points:
             if orientation == 1:
                 p = (100 - p[1], p[0])
                 # flip cw
@@ -247,8 +237,32 @@ class TileModel(EMModel):
             point = (p[0] * pointScale + scaleX,
                      p[1] * pointScale + scaleY)
 
-            tempPoints.append(QPoint(point[0], point[1]))
-        return tempPoints
+            pointList.append(QPoint(point[0], point[1]))
+        return pointList
+
+    def generateShapeOffset(self, si, xInd, yInd,
+                            scale=100, xOff=0, yOff=0,
+                            orientation=0, hflip=False,
+                            vflip=False):
+        scaleX = (xInd * scale) + xOff
+        scaleY = (yInd * scale) + yOff
+        pointScale = scale/100
+        return self.offsetShape(self.shapeList[si][1], scaleX, scaleY,
+                                pointScale, orientation, hflip, vflip)
+
+    def generateAllShapeOffset(self, xInd, yInd,
+                               scale=100, xOff=0, yOff=0,
+                               orientation=0, hflip=False,
+                               vflip=False):
+        tempShapes = []
+        scaleX = (xInd * scale) + xOff
+        scaleY = (yInd * scale) + yOff
+        pointScale = scale/100
+        for s in self.shapeList:
+            tempShapes.append(
+                self.offsetShape(s[1], scaleX, scaleY, pointScale,
+                                 orientation, hflip, vflip))
+        return tempShapes
 
     def transformRotate(self, cw):
         for i in range(len(self.pointList)):
@@ -726,3 +740,25 @@ class ImageTextureModel(TextureModel):
             "filePath": self.filePath,
             "uid": self.uid
         }
+
+
+class TextureModelLoader:
+    @classmethod
+    def createModelJS(cls, jsonObj):
+        model = None
+        if jsonObj["textureType"] == TextureModel.GeneratedTexture:
+            print("YES!")
+            model = GeneratedTextureModel.createModelJS(jsonObj)
+        elif jsonObj["textureType"] == TextureModel.ImageTexture:
+            print("maybe?")
+            model = ImageTextureModel.createModelJS(jsonObj)
+        else:
+            print("Nope:>")
+        return model
+
+    @classmethod
+    def createModelCopy(cls, model):
+        modelCopy = None
+        if isinstance(model, GeneratedTextureModel):
+            modelCopy = GeneratedTextureModel.createModelCopy(model)
+        return modelCopy

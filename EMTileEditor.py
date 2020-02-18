@@ -67,6 +67,10 @@ class TileEditor(EMModelEditor):
         self.vfBtn = QPushButton("--")
         self.vfBtn.clicked.connect(self.flipV)
 
+        self.addShapeBtn = QPushButton("Add Shape")
+        self.addShapeBtn.clicked.connect(self.addShape)
+        self.delShapeBtn = QPushButton("Del Shape")
+        # self.delShapeBtn.clicked.connect(self.delShape)
         self.addPointBtn = QPushButton("Add Point")
         self.addPointBtn.clicked.connect(self.addPoint)
         self.delPointBtn = QPushButton("Del Point")
@@ -76,39 +80,25 @@ class TileEditor(EMModelEditor):
         self.downPointBtn = QPushButton("Move Point Down")
         self.downPointBtn.clicked.connect(self.moveDownPoint)
 
-        self.fgColorBtn = QPushButton("Set FG")
-        self.fgColorBtn.clicked.connect(self.setFGColor)
-        self.bgColorBtn = QPushButton("Set BG")
-        self.bgColorBtn.clicked.connect(self.setBGColor)
-
-        self.bgTextureBox = QComboBox()
-        self.bgTextureBox.addItem("None")
-        self.bgTextureBox.addItem("Tile")
-        self.bgTextureBox.addItem("Grass")
-        self.bgTextureBox.addItem("Wood")
-        self.bgTextureBox.currentIndexChanged.connect(self.updateBGTexture)
-
-        self.fgTextureBox = QComboBox()
-        self.fgTextureBox.addItem("None")
-        self.fgTextureBox.addItem("Tile")
-        self.fgTextureBox.addItem("Grass")
-        self.fgTextureBox.addItem("Wood")
-        self.fgTextureBox.currentIndexChanged.connect(self.updateFGTexture)
+        self.shapeTextureBtn = QPushButton("Set Shape Texture")
+        self.shapeTextureBtn.clicked.connect(self.setFGColor)
+        self.bgTextureBtn = QPushButton("Set BG Texture")
+        self.bgTextureBtn.clicked.connect(self.setBGColor)
 
         self.buttonHolder = QWidget()
         bhLayout = QGridLayout()
-        bhLayout.addWidget(self.addPointBtn, 0, 0, 1, 3)
-        bhLayout.addWidget(self.delPointBtn, 0, 3, 1, 3)
-        bhLayout.addWidget(self.upPointBtn, 1, 0, 1, 3)
-        bhLayout.addWidget(self.downPointBtn, 1, 3, 1, 3)
-        bhLayout.addWidget(self.bgTextureBox, 2, 0)
-        bhLayout.addWidget(self.fgTextureBox, 3, 0)
-        bhLayout.addWidget(self.cwBtn, 4, 0, 1, 2)
-        bhLayout.addWidget(self.ccwBtn, 5, 0, 1, 2)
-        bhLayout.addWidget(self.hfBtn, 4, 2, 1, 2)
-        bhLayout.addWidget(self.vfBtn, 5, 2, 1, 2)
-        bhLayout.addWidget(self.fgColorBtn, 4, 4, 1, 2)
-        bhLayout.addWidget(self.bgColorBtn, 5, 4, 1, 2)
+        bhLayout.addWidget(self.addShapeBtn, 0, 0, 1, 3)
+        bhLayout.addWidget(self.delShapeBtn, 0, 3, 1, 3)
+        bhLayout.addWidget(self.addPointBtn, 1, 0, 1, 3)
+        bhLayout.addWidget(self.delPointBtn, 1, 3, 1, 3)
+        bhLayout.addWidget(self.upPointBtn, 2, 0, 1, 3)
+        bhLayout.addWidget(self.downPointBtn, 2, 3, 1, 3)
+        bhLayout.addWidget(self.shapeTextureBtn, 3, 0, 1, 3)
+        bhLayout.addWidget(self.bgTextureBtn, 3, 3, 1, 3)
+        bhLayout.addWidget(self.cwBtn, 4, 0, 1, 3)
+        bhLayout.addWidget(self.ccwBtn, 5, 0, 1, 3)
+        bhLayout.addWidget(self.hfBtn, 4, 3, 1, 3)
+        bhLayout.addWidget(self.vfBtn, 5, 3, 1, 3)
         self.buttonHolder.setLayout(bhLayout)
 
         layout.addWidget(self.previewWidget, 0, 0, 7, 1)
@@ -133,6 +123,9 @@ class TileEditor(EMModelEditor):
         self.previewWidget.setModel(self.model)
         self.updateUI()
 
+    def addShape(self):
+        self.model.addShape()
+
     def addPoint(self):
         self.model.addPoint(self.pointXEdit.value(),
                             self.pointYEdit.value())
@@ -154,7 +147,7 @@ class TileEditor(EMModelEditor):
 
     def updatePointPosition(self):
         index = self.tilePointList.currentRow()
-        self.model.updatePoint(index, self.pointXEdit.value(),
+        self.model.updatePoint(0, index, self.pointXEdit.value(),
                                self.pointYEdit.value())
 
     def rotCW(self):
@@ -235,16 +228,21 @@ class TileEditor(EMModelEditor):
         self.previewWidget.repaint()
         self.updateCurrentValues()
         self.modelNameEdit.setText(self.model.getName())
-        self.enableButtons()
+        # self.enableButtons()
 
     def reloadPointList(self):
         self.tilePointList.clear()
-        points = self.model.getPoints()
-        for i in range(len(points)):
-            point = points[i]
-            self.tilePointList.addItem("{}. ({}, {})"
-                                       .format(i+1, point[0], point[1]))
-        self.tilePointList.setCurrentRow(self.model.getSelectedIndex())
+        shapes = self.model.getShapes()
+        for i in range(len(shapes)):
+            self.tilePointList.addItem("<Shape {}>".format(i+1))
+            shapePoints = shapes[i][1]
+            for j in range(len(shapePoints)):
+                point = shapePoints[j]
+                self.tilePointList.addItem("-{}. ({}, {})"
+                                           .format(j+1, point[0], point[1]))
+
+        # TODO
+        # self.tilePointList.setCurrentRow(self.model.getSelectedIndex())
 
     def updateCurrentValues(self):
         currentIndex = self.model.getSelectedIndex()
@@ -306,10 +304,10 @@ class TilePreviewWidget(EMModelGraphics):
                                   self.tileSize, self.tileSize))
             EMImageGenerator.drawGrid(painter, 1, 1, 10, 10, self.tileSize)
             # self.drawTile(painter, 0, 0, self.model)
-            if not self.preview:
-                points = self.model.generatePointOffset(
-                    0, 0, self.tileSize, self.xOffset, self.yOffset)
-                self.drawPointObjects(painter, points)
+            # if not self.preview:
+            #     points = self.model.generatePointOffset(
+            #         0, 0, self.tileSize, self.xOffset, self.yOffset)
+            #     self.drawPointObjects(painter, points)
 
     def drawPointObjects(self, painter, points):
         painter.setPen(Qt.black)
@@ -377,7 +375,7 @@ class TilePreviewWidget(EMModelGraphics):
 
 def main():
     app = QApplication([])
-    model = TileModel("tileName", [(50, 50)])
+    model = TileModel()
     mainWidget = TileEditor(model)
     mainWidget.show()
     app.exec_()
