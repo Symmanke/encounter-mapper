@@ -479,7 +479,6 @@ class EMImageGenerator():
             # painter.setPen(Qt.NoPen)
             painter.setBrush(QBrush(texture))
             poly = QPolygon(pointsForShapes[i])
-            print(pointsForShapes[i])
             painter.drawPolygon(poly)
 
         # Add Background texture

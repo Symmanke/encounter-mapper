@@ -20,14 +20,16 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 from PyQt5.QtWidgets import (QApplication, QStackedWidget, QFileDialog,
-                             QLabel, QPushButton, QVBoxLayout,
-                             QWidget, QMainWindow, QAction)
+                             QLabel, QPushButton, QVBoxLayout, QComboBox,
+                             QWidget, QMainWindow, QAction, QSpinBox,
+                             QGridLayout, QDialog)
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 # from EMMapWidget import EMMapWidget
-from EMMapEditor import MapEditor
+from EMMapEditor import MapEditor, TileModel
 from EMModel import MapModel
+from EMTileEditor import TilePreviewWidget
 from EMHelper import ModelManager, EMImageGenerator
 import math
 
@@ -89,7 +91,7 @@ class EMMain(QMainWindow):
             Qt.Key_S | Qt.ControlModifier: (self.saveEncounter,),
             Qt.Key_S | Qt.ControlModifier | Qt.ShiftModifier:
             (self.saveAsEncounter,),
-            Qt.Key_N | Qt.ControlModifier: (self.newEncounter,),
+            Qt.Key_N | Qt.ControlModifier: (self.newEncounterOpenDialog,),
             Qt.Key_O | Qt.ControlModifier: (self.openEncounter,),
         }
 
@@ -97,7 +99,7 @@ class EMMain(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout()
         new = QPushButton("New Encounter")
-        new.clicked.connect(self.newEncounter)
+        new.clicked.connect(self.newEncounterOpenDialog)
         open = QPushButton("Open Encounter")
         open.clicked.connect(self.openEncounter)
         imageLabel = QLabel()
@@ -120,9 +122,33 @@ class EMMain(QMainWindow):
             else:
                 command[0](command[1])
 
-    def newEncounter(self):
-        self.editStack.setCurrentIndex(1)
-        self.setWindowTitle("untitled*")
+    def newEncounterOpenDialog(self):
+        self.newEncounterDialog = QDialog()
+        layout = QVBoxLayout()
+        self.newEncounterWidget = NewMapDialog()
+        self.newEncounterWidget.creatingNewMap.connect(self.createNewEncounter)
+        self.newEncounterWidget.cancelNewMap.connect(self.cancelNewEncounter)
+        layout.addWidget(self.newEncounterWidget)
+        self.newEncounterDialog.setLayout(layout)
+        self.newEncounterDialog.exec_()
+
+    def cancelNewEncounter(self):
+        self.newEncounterDialog.close()
+        self.newEncounterDialog = None
+        self.newEncounterWidget = None
+
+    def createNewEncounter(self):
+        self.model = self.newEncounterWidget.mapFromDialog()
+
+        self.newEncounterDialog.close()
+        self.newEncounterDialog = None
+        self.newEncounterWidget = None
+
+        if self.model is not None:
+
+            self.mapEditor.setModel(self.model)
+            self.editStack.setCurrentIndex(1)
+            self.setWindowTitle("untitled*")
 
     def openEncounter(self):
         pathToOpen = QFileDialog.getOpenFileName(self, 'Open File',
@@ -166,8 +192,8 @@ class EMMain(QMainWindow):
             modelJS = model.jsonObj()
             ModelManager.saveJSONToFile(modelJS, fp[0])
 
-    def exportEncounterMap(self, mods=None):
-        modifiers = ["groupPrint"]  # if mods is None else mods
+    def exportEncounterMap(self):  # , mods=None):
+        modifiers = []
         print(modifiers)
         filePath = QFileDialog.getSaveFileName(self, "Open Encounter",
                                                "", "Image (*.png)")
@@ -197,6 +223,72 @@ class EMMain(QMainWindow):
                     # pass
                 else:
                     print("model is not MapModel")
+
+
+class NewMapDialog(QWidget):
+    creatingNewMap = pyqtSignal()
+    cancelNewMap = pyqtSignal()
+
+    def __init__(self):
+        super(NewMapDialog, self).__init__()
+        self.numColsSB = QSpinBox()
+        self.numColsSB.setValue(5)
+        self.numRowsSB = QSpinBox()
+        self.numRowsSB.setValue(5)
+        self.tileToPopulate = QComboBox()
+        ModelManager.loadModelListFromFile(ModelManager.TileName, TileModel)
+        self.tiles = ModelManager.fetchModels(ModelManager.TileName)
+        self.tileToPopulate.addItem("--None--")
+        for tile in self.tiles:
+            self.tileToPopulate.addItem(tile.getName())
+        self.tileToPopulate.currentIndexChanged.connect(self.updateTilePreview)
+        self.tilePreview = TilePreviewWidget(216, 0, None, True)
+
+        self.okBtn = QPushButton("OK")
+        self.okBtn.clicked.connect(self.okSelected)
+        self.cancelBtn = QPushButton("Cancel")
+        self.cancelBtn.clicked.connect(self.cancelSelected)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("Rows:"), 0, 0)
+        layout.addWidget(self.numRowsSB, 0, 1)
+        layout.addWidget(QLabel("Cols:"), 0, 2)
+        layout.addWidget(self.numColsSB, 0, 3)
+        layout.addWidget(QLabel("Tile"), 1, 0)
+        layout.addWidget(self.tileToPopulate, 1, 1, 1, 3)
+        layout.addWidget(self.tilePreview, 2, 0, 1, 4)
+        layout.addWidget(self.okBtn, 3, 0, 1, 2)
+        layout.addWidget(self.cancelBtn, 3, 2, 1, 2)
+        self.setLayout(layout)
+
+    def okSelected(self):
+        self.creatingNewMap.emit()
+
+    def cancelSelected(self):
+        self.cancelNewMap.emit()
+
+    def updateTilePreview(self):
+        index = self.tileToPopulate.currentIndex() - 1
+        model = None
+        if index > 0:
+            model = self.tiles[index]
+        self.tilePreview.setModel(model)
+        self.tilePreview.repaint()
+
+    def mapFromDialog(self):
+        numRows = self.numRowsSB.value()
+        numCols = self.numColsSB.value()
+        tileUid = -1
+        if self.tileToPopulate.currentIndex() > 0:
+            tileUid = self.tiles[self.tileToPopulate.currentIndex()-1].getUid()
+        print(tileUid)
+        grid = []
+        for y in range(numRows):
+            grid.append([])
+            for x in range(numCols):
+                grid[-1].append((tileUid, 0, False, False))
+        model = MapModel("Untitled", grid)
+
+        return model
 
 
 app = QApplication([])

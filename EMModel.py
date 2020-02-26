@@ -101,7 +101,7 @@ class TileModel(EMModel):
 
     @classmethod
     def createModelCopy(cls, model):
-        mcopy = cls(model.getName(), model.getShapes, model.getBgTexture(),
+        mcopy = cls(model.getName(), model.getShapes(), model.getBgTexture(),
                     model.getUid())
         return mcopy
 
@@ -125,7 +125,6 @@ class TileModel(EMModel):
         self.modelUpdated.emit()
 
     def updatePoint(self, shape, index, x, y):
-        print("updating {},{}".format(shape, index))
         if shape >= 0 and shape < len(self.shapeList):
             if index >= 0 and index < len(self.shapeList[shape][1]):
                 self.shapeList[shape][1][index] = (x, y)
@@ -133,9 +132,16 @@ class TileModel(EMModel):
 
     def updateModel(self, model):
         self.name = model.getName()
-        self.pointList = model.getPoints()
-        self.bgColor = model.getBgColor()
-        self.fgColor = model.getFgColor()
+        self.shapeList = model.getShapes()
+        self.bgTexture = model.getBgTexture()
+        self.modelUpdated.emit()
+
+    def deleteShape(self, shape):
+        del self.shapeList[shape]
+        self.modelUpdated.emit()
+
+    def deleteShapePoint(self, shape, index):
+        del self.shapeList[shape][1][index]
         self.modelUpdated.emit()
 
     def deletePoint(self, index):
@@ -241,21 +247,23 @@ class TileModel(EMModel):
         return tempShapes
 
     def transformRotate(self, cw):
-        for i in range(len(self.pointList)):
-            point = self.pointList[i]
-            if cw:
-                self.pointList[i] = (100 - point[1], point[0])
-            else:
-                self.pointList[i] = (point[1], 100 - point[0])
+        for shape in self.shapeList:
+            for i in range(len(shape[1])):
+                point = shape[1][i]
+                if cw:
+                    shape[1][i] = (100 - point[1], point[0])
+                else:
+                    shape[1][i] = (point[1], 100 - point[0])
         self.modelUpdated.emit()
 
     def transformFlip(self, h):
-        for i in range(len(self.pointList)):
-            point = self.pointList[i]
-            if h:
-                self.pointList[i] = (100 - point[0], point[1])
-            else:
-                self.pointList[i] = (point[0], 100 - point[1])
+        for shape in self.shapeList:
+            for i in range(len(shape[1])):
+                point = shape[1][i]
+                if h:
+                    shape[1][i] = (100 - point[0], point[1])
+                else:
+                    shape[1][i] = (point[0], 100 - point[1])
         self.modelUpdated.emit()
 
     def jsonObj(self):
@@ -339,8 +347,6 @@ class GroupModel(EMModel):
                     for x in range(numCols):
                         y2 = (numRows-1) - y if options[2] else y
                         x2 = (numCols-1) - x if options[1] else x
-                        print("1:({},{}) 2:({},{})".format(x, y, x2, y2))
-                        print(len(tGrid))
 
                         tGrid[-1].append(mGrid[y2][x2])
             else:
@@ -490,8 +496,6 @@ class MapModel(GroupModel):
         self.modelUpdated.emit()
 
     def updateMapNote(self, note, index):
-        print(index)
-        print(note.getName())
         if index >= 0 and index < len(self.mapNotes):
             self.mapNotes[index] = note
         self.modelUpdated.emit()
@@ -618,6 +622,12 @@ class GeneratedTextureModel(TextureModel):
                         model.getTags(), model.getUid())
         return mcopy
 
+    def updateModel(self, model):
+        self.name = model.getName()
+        self.bgColor = model.getBgColor()
+        self.textures = model.getTextures()
+        pass
+
     def setBgColor(self, color):
         self.bgColor = color
         self.modelUpdated.emit()
@@ -714,13 +724,9 @@ class TextureModelLoader:
     def createModelJS(cls, jsonObj):
         model = None
         if jsonObj["textureType"] == TextureModel.GeneratedTexture:
-            print("YES!")
             model = GeneratedTextureModel.createModelJS(jsonObj)
         elif jsonObj["textureType"] == TextureModel.ImageTexture:
-            print("maybe?")
             model = ImageTextureModel.createModelJS(jsonObj)
-        else:
-            print("Nope:>")
         return model
 
     @classmethod

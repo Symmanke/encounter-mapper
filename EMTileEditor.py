@@ -83,7 +83,7 @@ class TileEditor(EMModelEditor):
         self.addShapeBtn = QPushButton("Add Shape")
         self.addShapeBtn.clicked.connect(self.addShape)
         self.delShapeBtn = QPushButton("Del Shape")
-        # self.delShapeBtn.clicked.connect(self.delShape)
+        self.delShapeBtn.clicked.connect(self.deleteShape)
         self.addPointBtn = QPushButton("Add Point")
         self.addPointBtn.clicked.connect(self.addPoint)
         self.delPointBtn = QPushButton("Del Point")
@@ -150,8 +150,25 @@ class TileEditor(EMModelEditor):
                                 self.pointXEdit.value(),
                                 self.pointYEdit.value())
 
+    def deleteShape(self):
+        if self.selectedShape > -1:
+            ss = self.selectedShape
+            self.selectedShape = -1
+            self.selectedPoint = -1
+            self.previewWidget.setSelectedShape(-1)
+            self.previewWidget.setSelectedPoint(-1)
+            self.model.deleteShape(ss)
+
     def deletePoint(self):
-        self.model.deleteSelectedPoint()
+        if self.selectedShape > -1 and self.selectedPoint > -1:
+            sp = self.selectedPoint
+
+            if len(self.model.getShape(self.selectedShape)[1]) == 1:
+                self.selectedPoint = -1
+            else:
+                self.selectedPoint = max(self.selectedPoint - 1, 0)
+            self.previewWidget.setSelectedPoint(self.selectedPoint)
+            self.model.deleteShapePoint(self.selectedShape, sp)
 
     def moveUpPoint(self):
         swap = self.model.getSelectedIndex() - 1
@@ -220,7 +237,8 @@ class TileEditor(EMModelEditor):
 
     def setCurShapeTexture(self):
         if self.selectedTexture > -1:
-            self.model.setShapeTexture(self.selectedShape, self.selectedTexture)
+            self.model.setShapeTexture(self.selectedShape,
+                                       self.selectedTexture)
 
     def setBgTexture(self):
         if self.selectedTexture > -1:
@@ -351,7 +369,7 @@ class TilePreviewWidget(EMModelGraphics):
 
     def paintEvent(self, paintEvent):
         painter = QPainter(self)
-        if(self.model is not None):
+        if self.model is not None:
             self.modelImage = EMImageGenerator.genImageFromModel(self.model)
             # tempImg = EMImageGenerator.genImageFromModel(
             #     self.model)
@@ -409,7 +427,6 @@ class TilePreviewWidget(EMModelGraphics):
         else:
             if self.binkedPoint:
                 mp = self.mousePosScale(QMouseEvent.pos())
-                print("updating shape {}".format(self.selectedShape))
                 self.model.updatePoint(self.selectedShape, self.selectedPoint,
                                        mp[0], mp[1])
 
