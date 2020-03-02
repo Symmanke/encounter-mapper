@@ -36,7 +36,7 @@ class TextureEditor(EMModelEditor):
             model = GeneratedTextureModel()
         super(TextureEditor, self).__init__(model)
 
-        self.previewWidget = TexturePreview(self.model)
+        self.previewWidget = TextureEditPreview(self.model)
         self.currentSelectedColor = QColor(255, 255, 255)
 
         self.uploadImageBtn = QPushButton("Upload Image")
@@ -371,9 +371,10 @@ class TextureEditor(EMModelEditor):
                                    self.txtToEdit)
 
 
-class TexturePreview(EMModelGraphics):
+class TextureEditPreview(EMModelGraphics):
     def __init__(self, model, width=216, height=216):
-        super(TexturePreview, self).__init__(model, 1, 1, 216, width, height)
+        super(TextureEditPreview, self).__init__(model, 1, 1, 216,
+                                                 width, height)
         self.generatedImage = EMImageGenerator.genImageFromModel(model)
 
     @classmethod
@@ -390,6 +391,23 @@ class TexturePreview(EMModelGraphics):
                               self.width, self.height)
 
             painter.end()
+
+
+class TexturePreview(EMModelGraphics):
+    def __init__(self, model, width=216, height=216):
+        super(TexturePreview, self).__init__(model, 1, 1, 216, width, height)
+
+    @classmethod
+    def previewWidget(cls, model):
+        return cls(model, 50, 50)
+
+    def paintEvent(self, paintEvent):
+        painter = QPainter(self)
+        img = EMImageGenerator.getTextureImage(self.model.getUid())
+        painter.drawImage(0, 0, img, 0, 0,
+                          self.width, self.height)
+
+        painter.end()
 
 
 def main():

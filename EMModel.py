@@ -583,6 +583,7 @@ class TextureModel(EMModel):
 
     def __init__(self, name="", type="", tags="", uid=-1):
         super(TextureModel, self).__init__(name, tags, uid)
+        self.dirty = True
 
 
 class GeneratedTextureModel(TextureModel):
@@ -595,6 +596,13 @@ class GeneratedTextureModel(TextureModel):
         if textures is None:
             self.textures = [["None", QColor(0, 0, 0)],
                              ["None", QColor(0, 0, 0)]]
+        self.dirty = True
+
+    def setDirty(self, dirty):
+        self.dirty = dirty
+
+    def isDirty(self):
+        return self.dirty
 
     @classmethod
     def createModelJS(cls, jsonObj):
@@ -626,10 +634,11 @@ class GeneratedTextureModel(TextureModel):
         self.name = model.getName()
         self.bgColor = model.getBgColor()
         self.textures = model.getTextures()
-        pass
+        self.dirty = True
 
     def setBgColor(self, color):
         self.bgColor = color
+        self.dirty = True
         self.modelUpdated.emit()
 
     def getBgColor(self):
@@ -637,10 +646,12 @@ class GeneratedTextureModel(TextureModel):
 
     def setTextureType(self, texture, index):
         self.textures[index][0] = texture
+        self.dirty = True
         self.modelUpdated.emit()
 
     def setTextureColor(self, color, index):
         self.textures[index][1] = color
+        self.dirty = True
         self.modelUpdated.emit()
 
     def getTextures(self):

@@ -269,7 +269,7 @@ class NewMapDialog(QWidget):
     def updateTilePreview(self):
         index = self.tileToPopulate.currentIndex() - 1
         model = None
-        if index > 0:
+        if index > -1:
             model = self.tiles[index]
         self.tilePreview.setModel(model)
         self.tilePreview.repaint()
